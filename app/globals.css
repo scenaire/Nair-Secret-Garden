@@ -1,26 +1,109 @@
+@import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@font-face {
+  font-family: 'GivePANINewYear2026';
+  src: url('/fonts/GivePANINewYear2026-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@font-face {
+  font-family: "Google Sans";
+  src: url('/fonts/GoogleSans-VariableFont_wght.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* 2. สร้างคลาส CSS ตาม ID ที่เราตั้งไว้ใน fontStyle.ts */
+.font-anuphan {
+  font-family: 'Anuphan', sans-serif;
+}
+
+.font-pani {
+  font-family: 'GivePANINewYear2026', cursive;
+}
+
+.font-google-sans {
+  font-family: 'Google Sans', sans-serif;
+}
+
+@theme {
+  /* 🌸 Color System (Spring Botanical Palette) */
+  --color-paper: #f6f3ef;
+  --color-surface: #ffffff;
+  --color-charcoal: #3e3a39;
+  --color-muted: #8c8682;
+
+  /* Accents */
+  --color-blush: #f2c6c2;
+  --color-petal: #f8e6d8;
+  --color-sage: #7e9a84;
+  --color-sky: #bcd7e6;
+  --color-gold: #e5b85c;
+
+  /* 🖋️ Typography */
+  --font-serif: var(--font-cormorant), ui-serif, Georgia, serif;
+  --font-sans: var(--font-noto-serif), ui-sans-serif, system-ui, sans-serif;
+
+  /* ✨ Shadows & Effects */
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 40px rgba(242, 198, 194, 0.2);
+
+  /* 🪟 Borders & Frames */
+  --radius-arch: 999px;
+}
+
+/* Global Styles & Film Grain */
+@layer base {
+  body {
+    /* ใช้สีพื้นหลังและฟอนต์หลักตาม Design System ทันที */
+    @apply bg-paper text-charcoal font-sans antialiased relative min-h-screen;
+  }
+
+  /* สีเวลาคลุมดำข้อความ (Highlight) */
+  ::selection {
+    @apply bg-blush/30 text-charcoal;
+  }
+
+  /* 🎞️ Subtle Film Grain Texture (สร้างนอยส์จางๆ ให้ดูเป็นกระดาษวินเทจ) */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    /* เพื่อไม่ให้ขวางการคลิก */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: 0.6;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* --- Tiptap Editor Custom Styles --- */
+/* ทุบหัว Tailwind Prose ให้ยอมใช้สไตล์ลิงก์ของเรา */
+.tiptap a {
+  color: #B85C57 !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  /* ปิดเส้นใต้แบบเดิมทิ้งไป */
+
+  /* ✨ ใช้รูปภาพ SVG วาดคลื่นแทน! ควบคุมความห่างได้ตามใจชอบ */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 10'%3E%3Cpath d='M 0 5 Q 10 0 20 5 T 40 5' fill='none' stroke='%23B85C57' stroke-width='1.5' stroke-opacity='0.6' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+  background-position: bottom 0px left 0px !important;
+  background-repeat: repeat-x !important;
+  background-size: 20px 8px !important;
+  /* ปรับขนาดคลื่นตรงนี้ 20px คือความกว้าง 8px คือความสูง */
+
+  padding-bottom: 5px !important;
+  /* ดันข้อความให้ลอยขึ้นเหนือคลื่นนิดนึง */
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.tiptap a:hover {
+  color: #8A3A36 !important;
+  /* โฮเวอร์แล้วคลื่นสีเข้มขึ้น */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 10'%3E%3Cpath d='M 0 5 Q 10 0 20 5 T 40 5' fill='none' stroke='%238A3A36' stroke-width='1.5' stroke-opacity='1' stroke-linecap='round'/%3E%3C/svg%3E") !important;
 }
