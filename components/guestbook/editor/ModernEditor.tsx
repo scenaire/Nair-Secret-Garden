@@ -1,47 +1,64 @@
-// components/guestbook/editor/ModernEditor.tsx
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+// Tiptap Extensions
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
-import { ResizableImage } from './ResizableImage';
 import TextAlign from '@tiptap/extension-text-align';
 import { FontFamily } from '@tiptap/extension-font-family';
 import { Color } from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
+import { ResizableImage } from './ResizableImage';
+
 import { cn } from '@/lib/utils';
-import { FONTS } from '@/styles/fontStyle';
-
-// Import ชิ้นส่วนที่เราแยกไว้
-import { VintageToolbar } from './VintageToolbar';
+import { FONTS } from '@/components/guestbook/editor/styles/fontStyle';
+import { VintageToolbar } from './toolbar/VintageToolbar';
 import { StickerCanvas } from './StickerCanvas';
-import { StickerData, TextureType, ModernEditorProps } from './types';
+import { TextureType, ModernEditorProps, PaperColorType } from './types';
+import { PAPER_COLORS, TEXTURE_STYLES } from './constants';
+import { useStickers } from './hooks/useStickers';
+import { useAutoSave } from './hooks/useAutoSave';
 
-export function ModernEditor({ content, onChange, paperColor = 'cream' }: ModernEditorProps) {
+export function ModernEditor({ content, onChange, paperColor: defaultPaperColor = 'cream' }: ModernEditorProps) {
     const [texture, setTexture] = useState<TextureType>('vintage-grid');
-    const [stickers, setStickers] = useState<StickerData[]>([]);
-    const [activeStickerId, setActiveStickerId] = useState<string | null>(null);
+
+    const [activePaperColor, setActivePaperColor] = useState<PaperColorType>(defaultPaperColor);
+    useEffect(() => {
+        setActivePaperColor(defaultPaperColor);
+    }, [defaultPaperColor]);
 
     const paperRef = useRef<HTMLDivElement>(null);
+
+    // Abstracted Business Logic
+    const {
+        stickers, activeStickerId, setActiveStickerId,
+        addSticker, updateSticker, removeSticker, clearActiveSticker
+    } = useStickers(paperRef);
+
+    // Auto-Save
+    const [editorContent, setEditorContent] = useState(content || '');
+    const { loadDraft, clearDraft, isSaving } = useAutoSave(editorContent, 1500); // หน่วง 1.5 วิ
 
     const editor = useEditor({
         immediatelyRender: false,
         extensions: [
-            StarterKit, Underline, Highlight.configure({ multicolor: true }),
+            StarterKit, Underline,
+            Highlight.configure({ multicolor: true }),
             Placeholder.configure({ placeholder: 'บันทึกเรื่องราวในสวนแห่งนี้...' }),
             Link.configure({ openOnClick: false }),
             TextAlign.configure({ types: ['heading', 'paragraph', 'resizableImage'] }),
-            TextStyle,
-            Color,
-            FontFamily,
-            ResizableImage,
+            TextStyle, Color, FontFamily, ResizableImage,
         ],
-        content: content || '',
-        onUpdate: ({ editor }) => onChange?.(editor.getHTML()),
+        content: loadDraft() || content || '',
+        onUpdate: ({ editor }) => {
+            const html = editor.getHTML();
+            setEditorContent(html);
+            onChange?.(html);
+        },
         editorProps: {
             attributes: {
                 class: cn(
@@ -53,74 +70,36 @@ export function ModernEditor({ content, onChange, paperColor = 'cream' }: Modern
         },
     });
 
-    // ยกเลิกการเลือกสติกเกอร์เมื่อคลิกที่ว่าง
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
-            if (!(e.target as Element).closest('.sticker-node') &&
-                !(e.target as Element).closest('.sticker-controls') &&
-                !(e.target as Element).closest('.sticker-drawer')) {
-                setActiveStickerId(null);
+            const target = e.target as Element;
+            if (!target.closest('.sticker-node') && !target.closest('.sticker-controls') && !target.closest('.sticker-drawer')) {
+                clearActiveSticker();
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const addSticker = (emoji: string) => {
-        const newSticker: StickerData = {
-            id: Math.random().toString(36).substring(7),
-            content: emoji,
-            xPercent: Math.random() * 40 + 20,
-            yPx: paperRef.current?.scrollTop ? paperRef.current.scrollTop + 150 : 150,
-            widthPercent: 25,
-            rotation: (Math.random() - 0.5) * 20,
-        };
-        setStickers([...stickers, newSticker]);
-        setActiveStickerId(newSticker.id);
-    };
-
-    const updateSticker = (id: string, updates: Partial<StickerData>) => {
-        setStickers(stickers.map(s => s.id === id ? { ...s, ...updates } : s));
-    };
-
-    const removeSticker = (id: string) => {
-        setStickers(stickers.filter(s => s.id !== id));
-    };
-
-    // 🎨 สีกระดาษและ Texture
-    const paperColors = { cream: "bg-[#FFFDF9]", blush: "bg-[#FFF0F0]", sky: "bg-[#F0F7FA]" };
-    const textureStyles = {
-        plain: {},
-        dotted: { backgroundImage: "radial-gradient(rgba(74, 59, 50, 0.15) 1.5px, transparent 1.5px)", backgroundSize: "28px 2.5rem", backgroundPosition: "0 0.5rem" },
-        'vintage-grid': {
-            backgroundImage: `
-        linear-gradient(rgba(74, 59, 50, 0.1) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(74, 59, 50, 0.1) 1px, transparent 1px),
-        repeating-linear-gradient(45deg, rgba(242, 198, 194, 0.2) 0, rgba(242, 198, 194, 0.2) 2px, transparent 2px, transparent 6px)
-      `,
-            backgroundSize: "36px 36px, 36px 36px, 12px 12px"
-        }
-    };
+    }, [clearActiveSticker]);
 
     if (!editor) return null;
 
     return (
         <div className="relative w-full max-w-3xl mx-auto rounded-xl shadow-[var(--shadow-soft)] border-2 border-[#E8DCC4]/50 flex flex-col bg-[#FDFCF0]">
-
-            {/* 🎀 Toolbar เรียกใช้จากไฟล์นอก */}
             <VintageToolbar
                 editor={editor}
                 texture={texture}
                 setTexture={setTexture}
+                paperColor={activePaperColor}
+                setPaperColor={setActivePaperColor}
                 addSticker={addSticker}
             />
 
-            <div ref={paperRef} className={cn("w-full h-full relative transition-colors duration-500", paperColors[paperColor])} style={textureStyles[texture]}>
-
-                {/* 📝 ตัวหนังสือ */}
+            <div
+                ref={paperRef}
+                className={cn("w-full h-full relative transition-colors duration-500", PAPER_COLORS[activePaperColor])}
+                style={TEXTURE_STYLES[texture]}
+            >
                 <EditorContent editor={editor} className="relative z-10" />
-
-                {/* ✨ ชั้นสติกเกอร์ เรียกใช้จากไฟล์นอก */}
                 <StickerCanvas
                     stickers={stickers}
                     activeStickerId={activeStickerId}
@@ -130,6 +109,18 @@ export function ModernEditor({ content, onChange, paperColor = 'cream' }: Modern
                     paperRef={paperRef}
                 />
 
+                {/* ✨ สถานะ Auto-Save มุมล่างขวา */}
+                <div className="absolute bottom-6 right-8 z-20 pointer-events-none transition-opacity duration-300">
+                    {isSaving ? (
+                        <span className="text-xs text-[#4A3B32]/40 font-noto-sans animate-pulse">
+                            กำลังแอบจด... 🪄
+                        </span>
+                    ) : editorContent ? (
+                        <span className="text-xs text-[#4A3B32]/30 font-noto-sans">
+                            บันทึกในความทรงจำแล้ว 🌸
+                        </span>
+                    ) : null}
+                </div>
             </div>
         </div>
     );
