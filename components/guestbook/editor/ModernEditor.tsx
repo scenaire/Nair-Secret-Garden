@@ -11,6 +11,7 @@ import Link from '@tiptap/extension-link';
 import { ResizableImage } from './ResizableImage';
 import TextAlign from '@tiptap/extension-text-align';
 import { FontFamily } from '@tiptap/extension-font-family';
+import { Color } from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { cn } from '@/lib/utils';
 import { FONTS } from '@/styles/fontStyle';
@@ -35,6 +36,7 @@ export function ModernEditor({ content, onChange, paperColor = 'cream' }: Modern
             Link.configure({ openOnClick: false }),
             TextAlign.configure({ types: ['heading', 'paragraph', 'resizableImage'] }),
             TextStyle,
+            Color,
             FontFamily,
             ResizableImage,
         ],
@@ -46,7 +48,6 @@ export function ModernEditor({ content, onChange, paperColor = 'cream' }: Modern
                     'prose prose-sm max-w-none focus:outline-none w-full min-h-[500px] p-8 md:p-12 pb-48',
                     'leading-[2.5rem] text-[#4A3B32]',
                     FONTS[0].id,
-                    FONTS[0].sizeClass,
                 ),
             },
         },

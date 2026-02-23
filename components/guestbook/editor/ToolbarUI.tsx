@@ -49,7 +49,7 @@ export function MenuItem({ onClick, isActive, icon, label, className }: { onClic
         <button
             onClick={onClick}
             className={cn(
-                "flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm transition-colors text-left font-serif",
+                "flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm transition-colors text-left font-noto-sans",
                 isActive ? "bg-[#F2C6C2]/20 text-[#4A3B32] font-medium" : "text-[#4A3B32]/70 hover:bg-[#4A3B32]/5",
                 className
             )}
