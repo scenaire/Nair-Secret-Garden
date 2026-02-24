@@ -19,7 +19,7 @@ import { FONTS } from '@/components/guestbook/editor/styles/fontStyle';
 import { VintageToolbar } from './toolbar/VintageToolbar';
 import { StickerCanvas } from './StickerCanvas';
 import { TextureType, ModernEditorProps, PaperColorType } from './types';
-import { PAPER_COLORS, TEXTURE_STYLES } from './constants';
+import { PAPER_COLORS, TEXTURE_STYLES, PAPER_LINK_COLORS } from './constants';
 import { useStickers } from './hooks/useStickers';
 import { useAutoSave } from './hooks/useAutoSave';
 
@@ -97,7 +97,10 @@ export function ModernEditor({ content, onChange, paperColor: defaultPaperColor 
             <div
                 ref={paperRef}
                 className={cn("w-full h-full relative transition-colors duration-500", PAPER_COLORS[activePaperColor])}
-                style={TEXTURE_STYLES[texture]}
+                style={{
+                    ...TEXTURE_STYLES[texture],
+                    '--theme-text-link': PAPER_LINK_COLORS[activePaperColor]
+                } as React.CSSProperties}
             >
                 <EditorContent editor={editor} className="relative z-10" />
                 <StickerCanvas

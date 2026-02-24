@@ -1,4 +1,3 @@
-// 1. ✨ เปลี่ยนบรรทัดบนสุดให้ Import Type เข้ามาด้วยค่ะ
 import { type PaperColorType } from './constants';
 
 export interface StickerData {
@@ -14,6 +13,29 @@ export type TextureType = 'plain' | 'dotted' | 'vintage-grid' | 'soft-paper';
 
 export type TabType = 'write' | 'decorate' | 'paper';
 
+export interface ThemeConfig {
+    id: string;
+    name: string;
+    coverImage: string;
+    defaultPaper: PaperColorType;
+    cssVars: {
+        '--theme-bg': string;
+        '--theme-icon': string;
+        '--theme-btn-bg': string;
+        '--theme-btn-text': string;
+        '--theme-toolbar-bg': string;
+        '--theme-toolbar-border': string;
+        '--theme-toolbar-icon-idle': string;
+        '--theme-toolbar-icon-active': string;
+        '--theme-toolbar-icon-hover': string;
+        '--theme-text-body': string;
+        '--theme-selection': string;
+        '--theme-scrollbar-thumb': string;
+        '--theme-scrollbar-track': string;
+
+    }
+}
+
 export interface ModernEditorProps {
     content?: string;
     onChange?: (content: string) => void;
@@ -23,3 +45,10 @@ export interface ModernEditorProps {
 export type MenuType = 'font' | 'typo' | 'color' | 'highlight' | 'link' | 'image' | 'sticker' | 'paper';
 
 export type { PaperColorType };
+
+export type MoodType = "warm" | "playful" | "shy" | "sincere" | "teasing";
+
+export interface Question {
+    text: string;
+    mood: MoodType;
+}

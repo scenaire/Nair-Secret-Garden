@@ -28,8 +28,8 @@ interface VintageToolbarProps {
     editor: Editor;
     texture: TextureType;
     setTexture: (t: TextureType) => void;
-    paperColor: PaperColorType;                     // ✨ เพิ่ม
-    setPaperColor: (c: PaperColorType) => void;     // ✨ เพิ่ม
+    paperColor: PaperColorType;
+    setPaperColor: (c: PaperColorType) => void;
     addSticker: (content: string) => void;
 }
 
@@ -37,7 +37,7 @@ export function VintageToolbar({ editor, texture, setTexture, paperColor, setPap
     const [activeDropdown, setActiveDropdown] = useState<MenuType | null>(null);
     const toolbarRef = useRef<HTMLDivElement>(null);
 
-    const currentColor = editor.getAttributes('textStyle')?.color || '#4A3B32';
+    const currentColor = editor.getAttributes('textStyle')?.color || 'var(--theme-text-body)';
     const recentColors = useRecentColors(currentColor);
 
     // Sync Editor State efficiently
@@ -73,7 +73,7 @@ export function VintageToolbar({ editor, texture, setTexture, paperColor, setPap
     };
 
     return (
-        <div className="sticky top-0 z-50 w-full bg-[#FFFDF9]/95 backdrop-blur-md shadow-sm border-b border-[#F2C6C2]/30" ref={toolbarRef}>
+        <div className="sticky top-0 z-50 w-full bg-[var(--theme-toolbar-bg)] backdrop-blur-md shadow-sm border-b border-[var(--theme-toolbar-border)] transition-colors duration-500" ref={toolbarRef}>
             <div className="flex items-center gap-1 md:gap-2 p-2 w-full overflow-x-auto scrollbar-hide max-w-4xl mx-auto relative">
 
                 {/* Font & Typo */}
@@ -109,7 +109,7 @@ export function VintageToolbar({ editor, texture, setTexture, paperColor, setPap
                 <Divider />
 
                 {/* Decorations */}
-                <ToolButton onClick={() => toggleMenu('sticker')} isActive={activeDropdown === 'sticker'} icon={<Sticker size={18} className={activeDropdown === 'sticker' ? "text-[#F2C6C2]" : ""} />} />
+                <ToolButton onClick={() => toggleMenu('sticker')} isActive={activeDropdown === 'sticker'} icon={<Sticker size={18} className={activeDropdown === 'sticker' ? "text-[var(--theme-icon)]" : ""} />} />
                 <Divider />
                 <ToolButton onClick={() => toggleMenu('paper')} isActive={activeDropdown === 'paper'} icon={<Layout size={18} />} />
             </div>

@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/* --- 1. Fonts Setup --- */
 @font-face {
   font-family: 'GivePANINewYear2026';
   src: url('/fonts/GivePANINewYear2026-Regular.ttf') format('truetype');
@@ -17,7 +18,34 @@
   font-display: swap;
 }
 
-/* 2. สร้างคลาส CSS ตาม ID ที่เราตั้งไว้ใน fontStyle.ts */
+/* --- 2. Tailwind v4 Theme Configuration --- */
+@theme {
+  /* 🌸 Color System (Spring Botanical Palette) */
+  --color-paper: #f6f3ef;
+  --color-surface: #ffffff;
+  --color-charcoal: #3e3a39;
+  --color-muted: #8c8682;
+
+  /* Accents */
+  --color-blush: #f2c6c2;
+  --color-petal: #f8e6d8;
+  --color-sage: #7e9a84;
+  --color-sky: #bcd7e6;
+  --color-gold: #e5b85c;
+
+  /* 🖋️ Typography */
+  --font-serif: var(--font-cormorant), ui-serif, Georgia, serif;
+  --font-sans: var(--font-noto-sans-thai), ui-sans-serif, system-ui, sans-serif;
+
+  /* ✨ Shadows & Effects */
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 40px rgba(242, 198, 194, 0.2);
+
+  /* 🪟 Borders & Frames */
+  --radius-arch: 999px;
+}
+
+/* --- 3. Custom Font Utilities --- */
 .font-anuphan {
   font-family: 'Anuphan', sans-serif;
 }
@@ -42,149 +70,108 @@
   font-family: var(--font-cormorant), serif !important;
 }
 
-@theme {
-  /* 🌸 Color System (Spring Botanical Palette) */
-  --color-paper: #f6f3ef;
-  --color-surface: #ffffff;
-  --color-charcoal: #3e3a39;
-  --color-muted: #8c8682;
-
-  /* Accents */
-  --color-blush: #f2c6c2;
-  --color-petal: #f8e6d8;
-  --color-sage: #7e9a84;
-  --color-sky: #bcd7e6;
-  --color-gold: #e5b85c;
-
-  /* 🖋️ Typography */
-  --font-serif: var(--font-cormorant), ui-serif, Georgia, serif;
-  --font-sans: var(--font-noto-serif), ui-sans-serif, system-ui, sans-serif;
-
-  /* ✨ Shadows & Effects */
-  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.05);
-  --shadow-glow: 0 0 40px rgba(242, 198, 194, 0.2);
-
-  /* 🪟 Borders & Frames */
-  --radius-arch: 999px;
-}
-
-/* Global Styles & Film Grain */
+/* --- 4. Global Mood & Tone Variables --- */
 @layer base {
-  body {
-    /* ใช้สีพื้นหลังและฟอนต์หลักตาม Design System ทันที */
-    @apply bg-paper text-charcoal font-sans antialiased relative min-h-screen;
-  }
-
-  /* สีเวลาคลุมดำข้อความ (Highlight) */
-  ::selection {
-    @apply bg-blush/30 text-charcoal;
-  }
-
-  /* 🎞️ Subtle Film Grain Texture (สร้างนอยส์จางๆ ให้ดูเป็นกระดาษวินเทจ) */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    pointer-events: none;
-    /* เพื่อไม่ให้ขวางการคลิก */
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-    opacity: 0.6;
+  :root {
+    /* 🌸 ค่าเริ่มต้น (Vanilla Cream) */
+    --theme-bg: #FDFCF0;
+    --theme-icon: #E8DCC4;
+    --theme-btn-bg: #E8DCC4;
+    --theme-btn-text: #4A3B32;
+    --theme-toolbar-bg: rgba(253, 252, 240, 0.95);
+    --theme-toolbar-border: rgba(232, 220, 196, 0.6);
+    --theme-toolbar-icon-idle: rgba(74, 59, 50, 0.6);
+    --theme-toolbar-icon-active: rgba(232, 220, 196, 0.8);
+    --theme-toolbar-icon-hover: rgba(74, 59, 50, 0.05);
+    --theme-defaultPaper: #FCFBEF;
+    --theme-text-body: #4A3B32;
+    --theme-text-link: #8C7A6B;
+    --theme-selection: rgba(232, 220, 196, 0.5);
+    --theme-scrollbar-thumb: rgba(232, 220, 196, 0.8);
+    --theme-scrollbar-track: transparent;
   }
 }
 
-/* --- Tiptap Editor Custom Styles --- */
+/* --- 5. Global Elements (Selection & Scrollbar) --- */
+::selection {
+  background-color: var(--theme-selection);
+  color: inherit;
+}
 
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--theme-scrollbar-track);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--theme-scrollbar-thumb);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-icon);
+}
+
+/* --- 6. Tiptap Editor Custom Styles --- */
 .tiptap span[style*="GivePANINewYear2026"] {
   font-size: 1.2em !important;
 }
 
-/* 👑 Heading 1: ใหญ่ โดดเด่น หนักแน่น */
 .tiptap h1 {
   font-size: 2.25em !important;
   font-weight: 700 !important;
   line-height: 1.2 !important;
   margin-top: 1.5em !important;
   margin-bottom: 0.5em !important;
-  color: #4A3B32 !important;
+  color: var(--theme-text-body) !important;
+  /* ✨ วิ่งตามตีม */
 }
 
-/* 🎀 Heading 2: ขนาดกลาง รองลงมาสวยๆ */
 .tiptap h2 {
   font-size: 1.75em !important;
   font-weight: 600 !important;
   line-height: 1.3 !important;
   margin-top: 1.2em !important;
   margin-bottom: 0.5em !important;
-  color: #4A3B32 !important;
+  color: var(--theme-text-body) !important;
+  /* ✨ วิ่งตามตีม */
 }
 
-/* 📝 Paragraph Text: ข้อความปกติ */
 .tiptap p {
   font-size: 1em !important;
-  /* ขนาดจะไหลตาม prose-sm (มือถือ) และ prose-base (PC) อัตโนมัติ */
   line-height: 1.2rem !important;
-  /* ล็อกความห่างบรรทัดให้พอดีกับเส้นบรรทัดสมุด */
   margin-bottom: 1em !important;
 }
 
-/* 🛑 ปิด Margin ของตัวแรกสุดไม่ให้ดันกรอบทะลุ */
 .tiptap>*:first-child {
   margin-top: 0 !important;
 }
 
+/* ✨ เส้นใต้ลิงก์แบบคลื่น (Wavy) ที่เปลี่ยนสีตามตีมได้อัตโนมัติ */
 .tiptap a {
-  color: #B85C57 !important;
+  color: var(--theme-text-link) !important;
   font-weight: 500 !important;
-  text-decoration: none !important;
-  /* ปิดเส้นใต้แบบเดิมทิ้งไป */
-
-  /* ✨ ใช้รูปภาพ SVG วาดคลื่นแทน! ควบคุมความห่างได้ตามใจชอบ */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 10'%3E%3Cpath d='M 0 5 Q 10 0 20 5 T 40 5' fill='none' stroke='%23B85C57' stroke-width='1.5' stroke-opacity='0.6' stroke-linecap='round'/%3E%3C/svg%3E") !important;
-  background-position: bottom 0px left 0px !important;
-  background-repeat: repeat-x !important;
-  background-size: 20px 8px !important;
-  /* ปรับขนาดคลื่นตรงนี้ 20px คือความกว้าง 8px คือความสูง */
-
-  padding-bottom: 5px !important;
-  /* ดันข้อความให้ลอยขึ้นเหนือคลื่นนิดนึง */
-  transition: all 0.2s ease-in-out;
+  text-decoration: underline !important;
+  text-decoration-style: wavy !important;
+  text-decoration-color: var(--theme-text-link) !important;
+  text-underline-offset: 4px !important;
+  transition: opacity 0.2s ease-in-out;
   cursor: pointer;
 }
 
 .tiptap a:hover {
-  color: #8A3A36 !important;
-  /* โฮเวอร์แล้วคลื่นสีเข้มขึ้น */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 10'%3E%3Cpath d='M 0 5 Q 10 0 20 5 T 40 5' fill='none' stroke='%238A3A36' stroke-width='1.5' stroke-opacity='1' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+  opacity: 0.7;
+  /* โฮเวอร์แล้วจางลงนิดนึงให้ดูมีมิติ */
 }
 
-/* --- Custom Vintage Scrollbar สำหรับ Editor --- */
-.editor-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  /* ขนาดเรียวเล็ก */
-  height: 8px;
-}
-
-.editor-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-  /* รางใสเนียนไปกับกระดาษ */
-}
-
-.editor-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #F2C6C2;
-  /* สีชมพูตุ่นเข้าธีม */
-  border-radius: 10px;
-  /* ขอบมนละมุน */
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-.editor-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #B85C57;
-  /* โฮเวอร์แล้วสีเข้มขึ้นเป็นแดงกุหลาบ */
-}
-
-/* --- คลาสซ่อน Scrollbar สำหรับ Toolbar มือถือ --- */
+/* --- 7. Utilities --- */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
