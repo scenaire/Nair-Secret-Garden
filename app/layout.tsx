@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Noto_Serif_Thai, Noto_Sans_Thai } from "next/font/google";
+import { Cormorant_Garamond, Noto_Serif_Thai, Noto_Sans_Thai, Playpen_Sans_Thai } from "next/font/google";
 import "./globals.css";
 
 // ฟอนต์หัวข้อ (หรูหรา โรแมนติก)
@@ -20,6 +20,12 @@ const notoSans = Noto_Sans_Thai({
   subsets: ["latin", "thai"],
   weight: ["300", "400", "500"],
   variable: "--font-noto-sans-thai",
+});
+
+const playpen_sans_thai = Playpen_Sans_Thai({
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+  variable: "--font-playpen-sans-thai",
 });
 
 export const metadata: Metadata = {

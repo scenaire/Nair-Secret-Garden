@@ -18,7 +18,7 @@ interface MoodToneSelectorProps {
 export function MoodToneSelector({ themes, activeTheme, onThemeChange }: MoodToneSelectorProps) {
     return (
         // ✨ กระดาษสีครีมขอบมนเรียบๆ สำหรับฝั่ง 20%
-        <div className="w-full h-full bg-[#FFFDF9] rounded-2xl p-4 flex flex-col justify-center items-end gap-3 shadow-sm border border-solid border-[#e6d5c3]">
+        <div className="w-full h-full bg-[#FFFDF9] rounded-2xl p-4 flex flex-col justify-center items-end gap-3 shadow-sm border border-solid border-[var(--theme-toolbar-border)]">
 
             <label className="text-xs font-serif uppercase tracking-widest text-[#4A3B32]/70 text-right w-full">
                 Mood & Tone

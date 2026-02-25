@@ -5,11 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArchedFrame } from "@/components/ui/ArchedFrame";
 import { ModernEditor } from "@/components/guestbook/editor/ModernEditor";
 import { Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 
 // ✨ นำเข้า 2 คอมโพเนนต์ใหม่สไตล์ Visual Novel
 import { ShoujoTopicPrompt } from "@/components/guestbook/ShoujoTopicPrompt";
 import { MoodToneSelector } from "@/components/guestbook/MoodToneSelector";
+import { GuestbookFooter } from "@/components/guestbook/GuestbookFooter";
 
 // ✨ ดึง THEMES และคำถามมาใช้งาน
 import { THEMES, ThemeKey, GUESTBOOK_QUESTIONS } from "@/components/guestbook/editor/constants";
@@ -99,8 +100,11 @@ export default function GuestbookPage() {
 
                     {/* ✨ กล่อง Wrapper ลายสก๊อต */}
                     <div
-                        className="w-full rounded-2xl overflow-hidden relative shadow-sm border border-[var(--theme-btn-bg)] transition-colors duration-500"
-                        style={{ backgroundColor: 'var(--theme-bg)' }}
+                        className="w-full rounded-2xl overflow-hidden relative shadow-sm border transition-colors duration-500"
+                        style={{
+                            backgroundColor: 'var(--theme-bg)',
+                            borderColor: 'var(--theme-toolbar-border)'
+                        }}
                     >
                         {/* 🏁 เลเยอร์ลายสก๊อต (ปรับ opacity ให้อ่อนลงนิดนึงจะได้ไม่แย่งซีน) */}
                         <div
@@ -116,7 +120,7 @@ export default function GuestbookPage() {
                         <div className="relative z-10 flex flex-row justify-between items-stretch p-4 w-full gap-4">
 
                             {/* ฝั่งซ้าย บังคับ 75% และไม่ขยายตามเนื้อหา */}
-                            <div className="w-[75%] flex-shrink-0">
+                            <div className="flex-1 min-w-0 flex">
                                 <ShoujoTopicPrompt
                                     question={GUESTBOOK_QUESTIONS[questionIndex]}
                                     onShuffle={handleShuffle}
@@ -125,7 +129,7 @@ export default function GuestbookPage() {
                             </div>
 
                             {/* ฝั่งขวา บังคับ 22% ดันชิดขวา และล็อคความกว้าง */}
-                            <div className="w-[22%] flex-shrink-0 flex justify-end">
+                            <div className="flex-shrink-0 flex justify-end">
                                 <MoodToneSelector
                                     themes={themeOptions}
                                     activeTheme={activeTheme}
@@ -144,6 +148,11 @@ export default function GuestbookPage() {
                             paperColor={currentTheme.defaultPaper}
                         />
                     </div>
+
+                    <GuestbookFooter
+                        content={content}
+                        redirectTo="/thank-you"
+                    />
 
                 </motion.div>
             </div>
