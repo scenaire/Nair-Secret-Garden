@@ -79,6 +79,7 @@ export const THEMES: Record<string, ThemeConfig> = {
             '--theme-icon': '#E6D7BD',
             '--theme-btn-bg': '#E6D7BD',
             '--theme-btn-text': '#4A3B32',
+            '--theme-accent-text': '#7A6147',       // ✨ น้ำตาลอุ่น contrast บน cream
 
             '--theme-toolbar-bg': 'rgba(253, 251, 244, 0.92)',
             '--theme-toolbar-border': 'rgba(230, 215, 189, 0.7)',
@@ -105,6 +106,7 @@ export const THEMES: Record<string, ThemeConfig> = {
             '--theme-icon': '#F4C9D4',
             '--theme-btn-bg': '#F4C9D4',
             '--theme-btn-text': '#4A3B32',
+            '--theme-accent-text': '#A85F75',       // ✨ ชมพูเข้ม contrast บน blush
 
             '--theme-toolbar-bg': 'rgba(255, 243, 246, 0.9)',
             '--theme-toolbar-border': 'rgba(244, 201, 212, 0.75)',
@@ -131,6 +133,7 @@ export const THEMES: Record<string, ThemeConfig> = {
             '--theme-icon': '#D2E6F6',
             '--theme-btn-bg': '#D2E6F6',
             '--theme-btn-text': '#4A3B32',
+            '--theme-accent-text': '#3A6F9E',       // ✨ ฟ้าเข้ม contrast บน sky
 
             '--theme-toolbar-bg': 'rgba(244, 249, 255, 0.9)',
             '--theme-toolbar-border': 'rgba(210, 230, 246, 0.75)',
@@ -144,7 +147,87 @@ export const THEMES: Record<string, ThemeConfig> = {
 
             '--theme-scrollbar-thumb': 'rgba(210, 230, 246, 0.9)',
             '--theme-scrollbar-track': 'transparent'
+        }
+    },
 
+    sage: {
+        id: "sage",
+        name: "Soft Sage",
+        coverImage: "/images/cover-sage.png",
+        defaultPaper: "cream",
+        cssVars: {
+            '--theme-bg': '#F4FBF7',
+            '--theme-icon': '#CFE7DA',
+            '--theme-btn-bg': '#CFE7DA',
+            '--theme-btn-text': '#4A3B32',
+            '--theme-accent-text': '#3D7558',       // ✨ เขียวเข้ม contrast บน sage
+
+            '--theme-toolbar-bg': 'rgba(244, 251, 247, 0.9)',
+            '--theme-toolbar-border': 'rgba(207, 231, 218, 0.75)',
+
+            '--theme-toolbar-icon-idle': 'rgba(74, 59, 50, 0.65)',
+            '--theme-toolbar-icon-active': 'rgba(207, 231, 218, 0.9)',
+            '--theme-toolbar-icon-hover': 'rgba(74, 59, 50, 0.08)',
+
+            '--theme-text-body': '#4A3B32',
+            '--theme-selection': 'rgba(207, 231, 218, 0.6)',
+
+            '--theme-scrollbar-thumb': 'rgba(207, 231, 218, 0.9)',
+            '--theme-scrollbar-track': 'transparent'
+        }
+    },
+
+    lavender: {
+        id: "lavender",
+        name: "Dusty Lavender",
+        coverImage: "/images/cover-lavender.png",
+        defaultPaper: "cream",
+        cssVars: {
+            '--theme-bg': '#F8F5FF',
+            '--theme-icon': '#E3D9F6',
+            '--theme-btn-bg': '#E3D9F6',
+            '--theme-btn-text': '#4A3B32',
+            '--theme-accent-text': '#6B5A9E',       // ✨ ม่วงเข้ม contrast บน lavender
+
+            '--theme-toolbar-bg': 'rgba(248, 245, 255, 0.9)',
+            '--theme-toolbar-border': 'rgba(227, 217, 246, 0.75)',
+
+            '--theme-toolbar-icon-idle': 'rgba(74, 59, 50, 0.65)',
+            '--theme-toolbar-icon-active': 'rgba(227, 217, 246, 0.9)',
+            '--theme-toolbar-icon-hover': 'rgba(74, 59, 50, 0.08)',
+
+            '--theme-text-body': '#4A3B32',
+            '--theme-selection': 'rgba(227, 217, 246, 0.6)',
+
+            '--theme-scrollbar-thumb': 'rgba(227, 217, 246, 0.9)',
+            '--theme-scrollbar-track': 'transparent'
+        }
+    },
+
+    butter: {
+        id: "butter",
+        name: "Butter Honey",
+        coverImage: "/images/cover-butter.png",
+        defaultPaper: "oliveMilk",
+        cssVars: {
+            '--theme-bg': '#FFFBEF',
+            '--theme-icon': '#F6E7B8',
+            '--theme-btn-bg': '#F6E7B8',
+            '--theme-btn-text': '#4A3B32',
+            '--theme-accent-text': '#A27B1E',       // ✨ เหลืองน้ำผึ้งเข้ม contrast ดีบนพื้นอ่อน
+
+            '--theme-toolbar-bg': 'rgba(255, 251, 239, 0.92)',
+            '--theme-toolbar-border': 'rgba(246, 231, 184, 0.75)',
+
+            '--theme-toolbar-icon-idle': 'rgba(74, 59, 50, 0.65)',
+            '--theme-toolbar-icon-active': 'rgba(246, 231, 184, 0.9)',
+            '--theme-toolbar-icon-hover': 'rgba(74, 59, 50, 0.08)',
+
+            '--theme-text-body': '#4A3B32',
+            '--theme-selection': 'rgba(246, 231, 184, 0.6)',
+
+            '--theme-scrollbar-thumb': 'rgba(246, 231, 184, 0.9)',
+            '--theme-scrollbar-track': 'transparent'
         }
     },
 
@@ -180,17 +263,57 @@ export const MOOD_STYLES: Record<MoodType, { bg: string; emoji: string }> = {
     shy: { bg: "bg-pink-200", emoji: "🌸" },
     sincere: { bg: "bg-blue-100", emoji: "❄️" },
     teasing: { bg: "bg-purple-100", emoji: "✨" },
+    nostalgic: { bg: "bg-amber-100", emoji: "📜" },
+    proud: { bg: "bg-emerald-100", emoji: "🌟" },
+    comforting: { bg: "bg-rose-100", emoji: "🤍" },
 };
 
-export const MOODS: MoodType[] = ["warm", "playful", "shy", "sincere", "teasing"];
+export const MOODS: MoodType[] = [
+    "warm",
+    "playful",
+    "shy",
+    "sincere",
+    "teasing",
+    "nostalgic",
+    "proud",
+    "comforting"
+];
 
-// ✨ ชุดคำถามใหม่ที่จับคู่อารมณ์ไว้แล้ว (อัปเดตหรือเพิ่มเองได้เลยนะคะ)
 export const GUESTBOOK_QUESTIONS: Question[] = [
-    { text: "เรารู้จักกันได้อย่างไร?", mood: "warm" },
-    { text: "ประทับใจอะไรในตัวฉัน?", mood: "shy" },
-    { text: "เรื่องตลกที่สุดที่เราเคยเจอด้วยกัน?", mood: "playful" },
-    { text: "ถ้าเปรียบฉันเป็นเพลง จะเป็นเพลงอะไร?", mood: "sincere" },
-    { text: "ความลับที่ยังไม่เคยบอกฉันคืออะไร?", mood: "teasing" }
+
+    // 🌸 warm
+    { text: "ช่วงเวลาที่อบอุ่นที่สุดที่เรามีด้วยกันคือช่วงไหน", mood: "warm" },
+    { text: "ถ้าจะส่งกอดหนึ่งครั้งให้ฉัน วันนี้อยากบอกอะไรด้วย", mood: "warm" },
+
+    // 🎈 playful
+    { text: "ถ้าเราไปเดตกันหนึ่งวัน คุณจะพาฉันไปทำอะไรดี", mood: "playful" },
+    { text: "ถ้าฉันเป็นตัวละครในเกม คุณคิดว่าสกิลหลักของฉันคืออะไร", mood: "playful" },
+    { text: "ตั้งฉายาแปลก ๆ ให้ฉันหนึ่งชื่อสิ", mood: "playful" },
+
+    // 🌷 shy
+    { text: "มีโมเมนต์ไหนที่ทำให้คุณเขินเวลาเห็นฉันบ้าง", mood: "shy" },
+    { text: "ถ้าต้องกระซิบคำหนึ่งใส่หูฉัน จะพูดว่าอะไรดี", mood: "shy" },
+
+    // 💌 sincere
+    { text: "สิ่งหนึ่งที่คุณอยากขอบคุณฉันจริง ๆ คืออะไร", mood: "sincere" },
+    { text: "ถ้าฉันกำลังเหนื่อยอยู่ คุณอยากบอกอะไรกับฉัน", mood: "sincere" },
+
+    // 😼 teasing
+    { text: "นิสัยอะไรของฉันที่คุณแอบแซวบ่อยที่สุด", mood: "teasing" },
+    { text: "ถ้าฉันเผลอทำหน้าเหวอ คุณจะล้อฉันว่ายังไง", mood: "teasing" },
+
+    // 🌙 nostalgic
+    { text: "โมเมนต์แรกที่คุณเริ่มติดตามฉันคือเมื่อไหร่", mood: "nostalgic" },
+    { text: "ไลฟ์หรือคลิปไหนที่คุณย้อนดูบ่อยที่สุด", mood: "nostalgic" },
+
+    // 🌟 proud
+    { text: "ช่วงไหนที่คุณรู้สึกภูมิใจในตัวฉันมากที่สุด", mood: "proud" },
+    { text: "ถ้าต้องเล่าให้คนอื่นฟังว่าฉันเก่งเรื่องอะไรที่สุด คุณจะตอบว่าอะไร", mood: "proud" },
+
+    // 🤍 comforting
+    { text: "ถ้าวันหนึ่งฉันไม่มั่นใจในตัวเอง คุณจะเตือนฉันว่าอะไร", mood: "comforting" },
+    { text: "คำอวยพรหนึ่งประโยคที่อยากให้ฉันเก็บไว้ทั้งปีนี้", mood: "comforting" }
+
 ];
 
 export const STICKER_PACKS = {

@@ -71,7 +71,7 @@ export function StampCard({
     teethRadius = 10,
     bgColor = '#FFFDF9',
     borderColor = 'rgba(74,59,50,0.18)',
-    innerPadding = 12,
+    innerPadding = 14,
 }: StampCardProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [size, setSize] = useState({ w: 600, h: 160 });

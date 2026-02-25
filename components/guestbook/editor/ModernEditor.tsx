@@ -24,7 +24,7 @@ import { useStickers } from './hooks/useStickers';
 import { useAutoSave } from './hooks/useAutoSave';
 
 export function ModernEditor({ content, onChange, paperColor: defaultPaperColor = 'cream' }: ModernEditorProps) {
-    const [texture, setTexture] = useState<TextureType>('vintage-grid');
+    const [texture, setTexture] = useState<TextureType>('plain');
 
     const [activePaperColor, setActivePaperColor] = useState<PaperColorType>(defaultPaperColor);
     useEffect(() => {

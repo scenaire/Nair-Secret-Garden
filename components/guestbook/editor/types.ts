@@ -23,6 +23,7 @@ export interface ThemeConfig {
         '--theme-icon': string;
         '--theme-btn-bg': string;
         '--theme-btn-text': string;
+        '--theme-accent-text': string;
         '--theme-toolbar-bg': string;
         '--theme-toolbar-border': string;
         '--theme-toolbar-icon-idle': string;
@@ -32,7 +33,7 @@ export interface ThemeConfig {
         '--theme-selection': string;
         '--theme-scrollbar-thumb': string;
         '--theme-scrollbar-track': string;
-
+        [key: `--${string}`]: string;
     }
 }
 
@@ -46,7 +47,9 @@ export type MenuType = 'font' | 'typo' | 'color' | 'highlight' | 'link' | 'image
 
 export type { PaperColorType };
 
-export type MoodType = "warm" | "playful" | "shy" | "sincere" | "teasing";
+export type MoodType = "warm" | "playful" | "shy" | "sincere" | "teasing" | "nostalgic" |
+    "proud" |
+    "comforting";
 
 export interface Question {
     text: string;

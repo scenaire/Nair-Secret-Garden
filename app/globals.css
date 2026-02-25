@@ -18,6 +18,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "SOV_FanChan";
+  src: url('/fonts/SOV_FanChan.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* --- 2. Tailwind v4 Theme Configuration --- */
 @theme {
   /* 🌸 Color System (Spring Botanical Palette) */
@@ -56,6 +64,10 @@
 
 .font-google-sans {
   font-family: 'Google Sans', sans-serif;
+}
+
+.font-fan-chan {
+  font-family: 'SOV_FanChan', cursive;
 }
 
 .font-noto-sans {
