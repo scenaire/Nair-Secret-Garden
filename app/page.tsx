@@ -357,15 +357,10 @@ export default function LandingPage() {
         {/* Polaroid ArchedFrame */}
         <PolaroidFrame>
           <img
-            src="/images/cover-cream.png"
-            alt="Nair"
-            onError={(e) => e.currentTarget.style.display = "none"}
+            src="/images/event-hero.png"
+            alt="Nair's Secret Garden"
             className="absolute inset-0 w-full h-full object-cover"
           />
-          {/* placeholder ถ้ายังไม่มีรูป */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-3xl opacity-20">🌸</p>
-          </div>
         </PolaroidFrame>
 
         {/* Title */}
