@@ -6,6 +6,8 @@ import { ArchedFrame } from "@/components/ui/ArchedFrame";
 import { ModernEditor } from "@/components/guestbook/editor/ModernEditor";
 import { Sparkles } from "lucide-react";
 
+import { Navbar } from "@/components/layout/GardenNavbar";
+import { useAuth } from "@/hooks/useAuth";
 
 // ✨ นำเข้า 2 คอมโพเนนต์ใหม่สไตล์ Visual Novel
 import { ShoujoTopicPrompt } from "@/components/guestbook/ShoujoTopicPrompt";
@@ -16,6 +18,7 @@ import { GuestbookFooter } from "@/components/guestbook/GuestbookFooter";
 import { THEMES, ThemeKey, GUESTBOOK_QUESTIONS } from "@/components/guestbook/editor/constants";
 
 export default function GuestbookPage() {
+    const { isLoggedIn, user, loginWithTwitch, logout } = useAuth(); //
     const [activeTheme, setActiveTheme] = useState<ThemeKey>('cream');
     const [content, setContent] = useState('');
     const [questionIndex, setQuestionIndex] = useState(0);
@@ -51,6 +54,14 @@ export default function GuestbookPage() {
             className="min-h-screen px-6 md:px-12 relative transition-colors duration-1000 bg-[var(--theme-bg)]"
             style={currentTheme.cssVars as React.CSSProperties}
         >
+
+            <Navbar
+                isLoggedIn={isLoggedIn}
+                user={user}
+                onLogin={loginWithTwitch}
+                onLogout={logout}
+            />
+
             <div className="absolute top-20 left-10 text-black/5 animate-pulse"><Sparkles size={40} strokeWidth={1} /></div>
             <div className="absolute bottom-20 right-20 text-black/5 animate-bounce"><Sparkles size={30} strokeWidth={1} /></div>
 
@@ -81,9 +92,7 @@ export default function GuestbookPage() {
                                         onError={(e) => e.currentTarget.style.display = 'none'}
                                         className="absolute inset-0 w-full h-full object-cover opacity-90 transition-opacity"
                                     />
-                                    <p className="font-serif text-3xl text-[var(--theme-text-body)]/90 italic z-10 drop-shadow-sm">
-                                        "Dear Nair..."
-                                    </p>
+
                                 </motion.div>
                             </AnimatePresence>
                         </div>

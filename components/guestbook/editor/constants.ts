@@ -153,7 +153,7 @@ export const THEMES: Record<string, ThemeConfig> = {
     sage: {
         id: "sage",
         name: "Soft Sage",
-        coverImage: "/images/cover-sage.png",
+        coverImage: "/images/guestbook/cover-sage.jpg",
         defaultPaper: "cream",
         cssVars: {
             '--theme-bg': '#F4FBF7',
