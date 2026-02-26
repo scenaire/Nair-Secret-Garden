@@ -156,6 +156,26 @@
   /* ✨ วิ่งตามตีม */
 }
 
+.tiptap h3 {
+  font-size: 1.5em !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  margin-top: 1em !important;
+  margin-bottom: 0.5em !important;
+  color: var(--theme-text-body) !important;
+  /* ✨ วิ่งตามธีม */
+}
+
+.tiptap h4 {
+  font-size: 1.25em !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  margin-top: 0.8em !important;
+  margin-bottom: 0.4em !important;
+  color: var(--theme-text-body) !important;
+  /* ✨ วิ่งตามธีม */
+}
+
 .tiptap p {
   font-size: 1em !important;
   line-height: 1.2rem !important;

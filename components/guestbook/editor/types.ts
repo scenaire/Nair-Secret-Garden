@@ -41,6 +41,10 @@ export interface ModernEditorProps {
     content?: string;
     onChange?: (content: string) => void;
     paperColor?: PaperColorType;
+    theme?: string;
+    onThemeChange?: (theme: string) => void;
+    insertPrompt?: string | null;
+    onPromptInserted?: () => void;
 }
 
 export type MenuType = 'font' | 'typo' | 'color' | 'highlight' | 'link' | 'image' | 'sticker' | 'paper';

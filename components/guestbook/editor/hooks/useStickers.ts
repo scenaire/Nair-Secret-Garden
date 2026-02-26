@@ -1,42 +1,36 @@
+// components/guestbook/editor/hooks/useStickers.ts
 import { useState, useCallback, RefObject } from 'react';
-import { StickerData } from '../types';
+import { StickerData } from './useAutoSave';
 
-export function useStickers(paperRef: RefObject<HTMLDivElement | null>) {
+export function useStickers(paperRef: RefObject<HTMLDivElement>) {
     const [stickers, setStickers] = useState<StickerData[]>([]);
     const [activeStickerId, setActiveStickerId] = useState<string | null>(null);
 
-    const addSticker = useCallback((emoji: string) => {
-        const scrollTop = paperRef.current?.scrollTop || 0;
+    const addSticker = useCallback((content: string) => {
         const newSticker: StickerData = {
-            id: Math.random().toString(36).substring(7),
-            content: emoji,
-            xPercent: Math.random() * 40 + 20,
-            yPx: scrollTop + 150,
+            id: `sticker-${Date.now()}`,
+            content,
+            xPercent: 50,
+            yPercent: 20, // ✨ ใช้ yPercent แทน yPx
             widthPercent: 25,
-            rotation: (Math.random() - 0.5) * 20,
+            rotation: Math.random() * 20 - 10,
         };
-        setStickers((prev) => [...prev, newSticker]);
+        setStickers(prev => [...prev, newSticker]);
         setActiveStickerId(newSticker.id);
-    }, [paperRef]);
+    }, []);
 
-    const updateSticker = useCallback((id: string, updates: Partial<StickerData>) => {
-        setStickers((prev) => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    const updateSticker = useCallback((id: string, changes: Partial<StickerData>) => {
+        setStickers(prev => prev.map(s => s.id === id ? { ...s, ...changes } : s));
     }, []);
 
     const removeSticker = useCallback((id: string) => {
-        setStickers((prev) => prev.filter(s => s.id !== id));
+        setStickers(prev => prev.filter(s => s.id !== id));
         setActiveStickerId(null);
     }, []);
 
-    const clearActiveSticker = useCallback(() => setActiveStickerId(null), []);
+    const clearActiveSticker = useCallback(() => {
+        setActiveStickerId(null);
+    }, []);
 
-    return {
-        stickers,
-        activeStickerId,
-        setActiveStickerId,
-        addSticker,
-        updateSticker,
-        removeSticker,
-        clearActiveSticker
-    };
+    return { stickers, setStickers, activeStickerId, setActiveStickerId, addSticker, updateSticker, removeSticker, clearActiveSticker };
 }

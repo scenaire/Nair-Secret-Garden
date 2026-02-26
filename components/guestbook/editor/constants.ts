@@ -258,14 +258,14 @@ export const TEXTURE_STYLES: Record<TextureType, React.CSSProperties> = {
 
 // ✨ ย้ายสไตล์อารมณ์มาไว้ที่นี่
 export const MOOD_STYLES: Record<MoodType, { bg: string; emoji: string }> = {
-    warm: { bg: "bg-orange-100", emoji: "☀️" },
-    playful: { bg: "bg-yellow-100", emoji: "🎵" },
-    shy: { bg: "bg-pink-200", emoji: "🌸" },
-    sincere: { bg: "bg-blue-100", emoji: "❄️" },
-    teasing: { bg: "bg-purple-100", emoji: "✨" },
-    nostalgic: { bg: "bg-amber-100", emoji: "📜" },
-    proud: { bg: "bg-emerald-100", emoji: "🌟" },
-    comforting: { bg: "bg-rose-100", emoji: "🤍" },
+    warm: { bg: "", emoji: "☀️" },
+    playful: { bg: "", emoji: "🎵" },
+    shy: { bg: "", emoji: "🌸" },
+    sincere: { bg: "", emoji: "❄️" },
+    teasing: { bg: "", emoji: "✨" },
+    nostalgic: { bg: "", emoji: "📜" },
+    proud: { bg: "", emoji: "🌟" },
+    comforting: { bg: "", emoji: "🤍" },
 };
 
 export const MOODS: MoodType[] = [

@@ -1,5 +1,4 @@
 // hooks/useAuth.ts
-// ใช้แทน mock useAuth ใน page ต่างๆ
 
 "use client";
 

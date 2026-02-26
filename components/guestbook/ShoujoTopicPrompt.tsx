@@ -66,7 +66,7 @@ export function ShoujoTopicPrompt({ question, onShuffle, onWrite }: ShoujoTopicP
                     <div className="flex items-center gap-3">
                         <button
                             onClick={onWrite}
-                            className="text-xs bg-[var(--theme-btn-bg)] text-white px-4 py-1.5 rounded-full hover:scale-105 hover:shadow-md transition-all shadow-sm font-medium flex items-center"
+                            className="text-xs bg-[var(--theme-btn-bg)] text-[var(--theme-accent-text)] px-4 py-1.5 rounded-full hover:scale-105 hover:shadow-md transition-all shadow-sm font-medium flex items-center"
                         >
                             Write this one
                         </button>
