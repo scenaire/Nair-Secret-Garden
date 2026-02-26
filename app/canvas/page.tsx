@@ -1,7 +1,13 @@
 // app/canvas/page.tsx
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+    useState,
+    useRef,
+    useEffect,
+    useCallback,
+    type RefObject,
+} from "react";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/layout/GardenNavbar";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,10 +18,10 @@ import {
 } from "@/components/canvas/PixelCanvas";
 import { CanvasToolbar } from "@/components/canvas/CanvasToolbar/CanvasToolbar";
 import { StampCard } from "@/components/ui/StampCard";
-import { useCanvasPresence } from "@/components/canvas/hooks/useCanvasPresence";
 import {
     subscribeToCanvas,
     broadcastStroke,
+    trackPresence,
     saveSnapshot,
     loadSnapshot,
     downloadCanvas,
@@ -30,124 +36,163 @@ import {
     floodFill,
 } from "@/lib/pixelEngine";
 
-// ─── Save status indicator ───────────────────────────────────────────────────
-type SaveStatus = "idle" | "saving" | "saved";
+type SaveStatus = "idle" | "pending" | "saving" | "saved";
+
+const SAVE_DEBOUNCE_MS = 5000;
 
 export default function CanvasPage() {
-    const {
-        isLoggedIn,
-        user,       // UI user (name, avatar)
-        rawUser,    // Supabase User
-        loginWithTwitch,
-        logout,
-    } = useAuth();
-
-    // เตรียมข้อมูล user สำหรับ presence (Supabase Realtime)
-    const presenceUser =
-        isLoggedIn && rawUser
-            ? {
-                id: rawUser.id,
-                name:
-                    rawUser.user_metadata?.name ??
-                    rawUser.user_metadata?.preferred_username ??
-                    "Guest",
-            }
-            : null;
-
-    // ใช้ hook presence
-    const onlineUsers = useCanvasPresence("guestbook-board-2025", presenceUser);
+    const { isLoggedIn, user: uiUser, rawUser, loginWithTwitch, logout } =
+        useAuth();
 
     const [tool, setTool] = useState<Tool>("pencil");
     const [color, setColor] = useState<PixelColor>("#FF8FAB");
     const [brushSize, setBrushSize] = useState<1 | 2 | 4>(1);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
     const [isLoading, setIsLoading] = useState(true);
+    const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
     const canvasRef = useRef<PixelCanvasRef>(null);
     const channelRef = useRef<ReturnType<typeof subscribeToCanvas> | null>(null);
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // ── Load snapshot on mount ──────────────────────────────────────────────
+    const userId = rawUser?.id ?? "";
+    const userName =
+        uiUser?.name ??
+        rawUser?.user_metadata?.name ??
+        rawUser?.user_metadata?.preferred_username ??
+        "Guest";
+
+    // ───────────────────────────────────────────────────────────────
+    // Load snapshot on mount
+    // ───────────────────────────────────────────────────────────────
     useEffect(() => {
+        let isMounted = true;
+
         loadSnapshot().then((url) => {
+            if (!isMounted) return;
+
             if (!url) {
                 setIsLoading(false);
                 return;
             }
+
             const img = new Image();
             img.crossOrigin = "anonymous";
             img.onload = () => {
                 const off = canvasRef.current?.getCanvas();
-                if (!off) return;
-                const ctx = off.getContext("2d")!;
+                if (!off) {
+                    setIsLoading(false);
+                    return;
+                }
+                const ctx = off.getContext("2d");
+                if (!ctx) {
+                    setIsLoading(false);
+                    return;
+                }
                 ctx.drawImage(img, 0, 0);
                 setIsLoading(false);
             };
-            img.onerror = () => setIsLoading(false);
+            img.onerror = () => {
+                console.error("[snapshot] image load failed", url);
+                setIsLoading(false);
+            };
             img.src = url;
         });
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
-    // ── Subscribe to Realtime when logged in ────────────────────────────────
+    // ───────────────────────────────────────────────────────────────
+    // Subscribe to realtime canvas when logged in
+    // ───────────────────────────────────────────────────────────────
     useEffect(() => {
-        if (!isLoggedIn || !user) return;
+        if (!isLoggedIn || !userId) return;
 
         const channel = subscribeToCanvas(
             // on remote stroke
             (msg: StrokeMessage) => {
-                // ข้าม stroke ของตัวเอง (กัน echo)
-                if (msg.userId === user.name) return;
+                // ข้ามของตัวเอง (เผื่อ config self:false พลาด)
+                if (msg.userId === userId) return;
 
                 const off = canvasRef.current?.getCanvas();
                 if (!off) return;
-                const ctx = off.getContext("2d")!;
+
+                const ctx = off.getContext("2d");
+                if (!ctx) return;
 
                 msg.pixels.forEach((p) => {
-                    if (p.color.startsWith("FILL:")) {
-                        floodFill(ctx, p.x, p.y, p.color.replace("FILL:", ""), p.size);
+                    if (typeof p.color === "string" && p.color.startsWith("FILL:")) {
+                        const fillColor = p.color.replace("FILL:", "");
+                        floodFill(ctx, p.x, p.y, fillColor, p.size);
                     } else {
                         drawPixel(ctx, p);
                     }
                 });
 
+                // sync internal pixel state ถ้า PixelCanvas ใช้งาน
                 canvasRef.current?.applyRemotePixels(msg.pixels);
             },
-            // on presence change – ตอนนี้ใช้ useCanvasPresence แล้ว เลยไม่ต้อง sync จากตรงนี้
-            () => {
-                /* presence handled by useCanvasPresence */
+            // on presence change
+            (users) => {
+                setOnlineUsers(users);
             }
         );
 
         channelRef.current = channel;
+        void trackPresence(channel, userName);
 
         return () => {
             channel.unsubscribe();
+            channelRef.current = null;
         };
-    }, [isLoggedIn, user]);
+    }, [isLoggedIn, userId, userName]);
 
-    // ── Handle local stroke → broadcast + debounce save ────────────────────
+    // ───────────────────────────────────────────────────────────────
+    // Handle local stroke → broadcast + debounce save
+    // ───────────────────────────────────────────────────────────────
     const handleStroke = useCallback(
         async (pixels: Pixel[]) => {
-            if (!channelRef.current || !user) return;
+            // ถ้าไม่มี channel หรือไม่ได้ login ก็วาดแค่ local
+            if (!channelRef.current || !userId) {
+                // แค่ตั้งสถานะ pending save ไว้ เผื่ออนาคตอยากเซฟ local-only
+                setSaveStatus("pending");
+                return;
+            }
+
+            // มีการแก้ไขใหม่ → แสดงว่า "กำลังจะมีการเซฟในอีกสักพัก"
+            setSaveStatus((prev) => (prev === "saving" ? prev : "pending"));
 
             await broadcastStroke(channelRef.current, {
-                userId: user.name,
-                userName: user.name,
+                userId,
+                userName,
                 pixels,
             });
 
-            // debounce save snapshot
+            // debounce การเซฟ snapshot 5 วินาที
             if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+
             saveTimerRef.current = setTimeout(async () => {
                 const off = canvasRef.current?.getCanvas();
                 if (!off) return;
+
                 setSaveStatus("saving");
-                await saveSnapshot(off);
-                setSaveStatus("saved");
-                setTimeout(() => setSaveStatus("idle"), 2000);
-            }, 5000);
+                try {
+                    await saveSnapshot(off);
+                    setSaveStatus("saved");
+                    // แสดง saved ซักพัก แล้วกลับไป idle
+                    setTimeout(() => {
+                        setSaveStatus("idle");
+                    }, 2000);
+                } catch (err) {
+                    console.error("[snapshot] save failed", err);
+                    // ไม่เพิ่มสถานะ error แยก เพราะเธอบอกแค่ stage ล่าสุดก็พอ
+                    setSaveStatus("idle");
+                }
+            }, SAVE_DEBOUNCE_MS);
         },
-        [user]
+        [userId, userName]
     );
 
     const handleDownload = () => {
@@ -155,12 +200,16 @@ export default function CanvasPage() {
         if (off) downloadCanvas(off);
     };
 
+    // ───────────────────────────────────────────────────────────────
+    // UI
+    // ───────────────────────────────────────────────────────────────
+
     return (
         <main
             className="h-screen flex flex-col overflow-hidden"
             style={{ backgroundColor: "#FDFBF4", fontFamily: "'Noto Sans', sans-serif" }}
         >
-            {/* Ambient petals (subtle) */}
+            {/* Ambient petals (เบา ๆ) */}
             {[0, 1, 2, 3, 4].map((i) => (
                 <motion.div
                     key={i}
@@ -182,22 +231,25 @@ export default function CanvasPage() {
                     }}
                 >
                     <svg viewBox="0 0 20 20" width={8} height={8} opacity={0.25}>
-                        <path d="M10,0 C15,5 15,15 10,20 C5,15 5,5 10,0Z" fill="#FFB7C5" />
+                        <path
+                            d="M10,0 C15,5 15,15 10,20 C5,15 5,5 10,0Z"
+                            fill="#FFB7C5"
+                        />
                     </svg>
                 </motion.div>
             ))}
 
-            {/* Navbar */}
+            {/* Navbar ด้านบน */}
             <Navbar
                 isLoggedIn={isLoggedIn}
-                user={user}
+                user={uiUser}
                 onLogin={loginWithTwitch}
                 onLogout={logout}
             />
 
-            {/* ── Main area (below navbar) ── */}
+            {/* Main area ด้านล่าง navbar */}
             <div className="flex flex-1 overflow-hidden pt-14">
-                {/* ── Not logged in gate ── */}
+                {/* Gate: ต้อง login ก่อน */}
                 {!isLoggedIn ? (
                     <div className="flex-1 flex items-center justify-center">
                         <motion.div
@@ -214,7 +266,10 @@ export default function CanvasPage() {
                                     <p className="text-4xl">🖌️</p>
                                     <h2
                                         className="text-lg font-bold"
-                                        style={{ fontFamily: "'Noto Serif', serif", color: "#6B4C43" }}
+                                        style={{
+                                            fontFamily: "'Noto Serif', serif",
+                                            color: "#6B4C43",
+                                        }}
                                     >
                                         The Picnic Canvas
                                     </h2>
@@ -222,7 +277,8 @@ export default function CanvasPage() {
                                         className="text-sm opacity-60 max-w-xs"
                                         style={{ color: "#8B5E52" }}
                                     >
-                                        Login with Twitch to join the collaborative pixel art canvas!
+                                        Login with Twitch to join the collaborative pixel art
+                                        canvas!
                                     </p>
                                     <motion.button
                                         onClick={loginWithTwitch}
@@ -231,7 +287,11 @@ export default function CanvasPage() {
                                         className="flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold mt-2"
                                         style={{ backgroundColor: "#9146FF", color: "#fff" }}
                                     >
-                                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="white">
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            className="w-4 h-4"
+                                            fill="white"
+                                        >
                                             <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
                                         </svg>
                                         Login with Twitch
@@ -242,7 +302,7 @@ export default function CanvasPage() {
                     </div>
                 ) : (
                     <div className="flex flex-1 overflow-hidden gap-0">
-                        {/* ── Toolbar sidebar ── */}
+                        {/* Toolbar ด้านซ้าย */}
                         <div
                             className="w-[260px] min-w-[260px] flex-shrink-0 overflow-y-auto py-3 px-3"
                             style={{
@@ -263,9 +323,9 @@ export default function CanvasPage() {
                             />
                         </div>
 
-                        {/* ── Canvas area ── */}
+                        {/* พื้นที่ Canvas */}
                         <div className="flex-1 relative overflow-hidden">
-                            {/* Title bar */}
+                            {/* Title bar เหนือ canvas */}
                             <div
                                 className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 px-4 py-1.5 rounded-full"
                                 style={{
@@ -276,7 +336,10 @@ export default function CanvasPage() {
                             >
                                 <span
                                     className="text-xs font-bold"
-                                    style={{ fontFamily: "'Noto Serif', serif", color: "#8B5E52" }}
+                                    style={{
+                                        fontFamily: "'Noto Serif', serif",
+                                        color: "#8B5E52",
+                                    }}
                                 >
                                     🖌️ Picnic Canvas
                                 </span>
@@ -286,13 +349,22 @@ export default function CanvasPage() {
                                 >
                                     {CANVAS_WIDTH}×{CANVAS_HEIGHT}
                                 </span>
-                                {/* save status */}
-                                {saveStatus === "saving" && (
+
+                                {/* save status เล็ก ๆ แต่มองเห็นได้ */}
+                                {saveStatus === "pending" && (
                                     <span
-                                        className="text-[10px] opacity-60"
+                                        className="text-[10px]"
                                         style={{ color: "#8B5E52" }}
                                     >
-                                        saving...
+                                        changes pending…
+                                    </span>
+                                )}
+                                {saveStatus === "saving" && (
+                                    <span
+                                        className="text-[10px]"
+                                        style={{ color: "#8B5E52" }}
+                                    >
+                                        saving…
                                     </span>
                                 )}
                                 {saveStatus === "saved" && (
@@ -305,7 +377,7 @@ export default function CanvasPage() {
                                 )}
                             </div>
 
-                            {/* Hint */}
+                            {/* Hint ด้านล่าง */}
                             <div
                                 className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 text-[10px] px-3 py-1 rounded-full pointer-events-none"
                                 style={{
@@ -318,7 +390,7 @@ export default function CanvasPage() {
                                 Scroll to zoom · Alt+drag to pan
                             </div>
 
-                            {/* Loading overlay */}
+                            {/* Loading overlay ระหว่างโหลด snapshot */}
                             {isLoading && (
                                 <div
                                     className="absolute inset-0 z-20 flex items-center justify-center"
@@ -329,21 +401,25 @@ export default function CanvasPage() {
                                 >
                                     <p
                                         className="text-sm animate-pulse"
-                                        style={{ fontFamily: "'Noto Serif', serif", color: "#8B5E52" }}
+                                        style={{
+                                            fontFamily: "'Noto Serif', serif",
+                                            color: "#8B5E52",
+                                        }}
                                     >
                                         Loading canvas... 🌸
                                     </p>
                                 </div>
                             )}
 
+                            {/* ตัว PixelCanvas จริง */}
                             <PixelCanvas
-                                ref={canvasRef}
+                                ref={canvasRef as RefObject<PixelCanvasRef>}
                                 tool={tool}
                                 color={color}
                                 brushSize={brushSize}
                                 onColorPick={setColor}
                                 onStroke={handleStroke}
-                                userId={user?.name ?? ""}
+                                userId={userId}
                             />
                         </div>
                     </div>

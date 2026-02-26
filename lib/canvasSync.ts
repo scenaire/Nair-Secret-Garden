@@ -1,7 +1,7 @@
 // lib/canvasSync.ts
 import { createClient } from "@/lib/supabase/client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { Pixel } from "./pixelEngine";
-import { CANVAS_WIDTH, CANVAS_HEIGHT } from "./pixelEngine";
 
 const CHANNEL_NAME = "picnic-canvas";
 const SNAPSHOT_BUCKET = "canvas-snapshots";
@@ -13,18 +13,21 @@ export interface StrokeMessage {
     pixels: Pixel[];
 }
 
-// ─── Realtime broadcast ─────────────────────────────────────────────────────
-// lib/canvasSync.ts
+// ───────────────────────────────────────────────────────────────
+// Realtime broadcast + presence
+// ───────────────────────────────────────────────────────────────
+
 export function subscribeToCanvas(
     onStroke: (msg: StrokeMessage) => void,
     onPresenceChange: (users: string[]) => void
-) {
+): RealtimeChannel {
     const supabase = createClient();
+    console.log("[realtime] creating channel", CHANNEL_NAME);
 
     const channel = supabase.channel(CHANNEL_NAME, {
         config: {
             broadcast: { self: false },
-            presence: { key: "userName" }, // key อะไรก็ได้ที่ stable
+            presence: { key: "userName" },
         },
     });
 
@@ -50,36 +53,60 @@ export function subscribeToCanvas(
 }
 
 export async function broadcastStroke(
-    channel: ReturnType<ReturnType<typeof createClient>["channel"]>,
+    channel: RealtimeChannel,
     msg: StrokeMessage
-) {
-    await channel.send({
+): Promise<void> {
+    const result = await channel.send({
         type: "broadcast",
         event: "stroke",
         payload: msg,
     });
+
+    // result เป็น union string: "ok" | "timed out" | "error" | "channel closed" | "not joined"
+    if (result !== "ok") {
+        console.error("[realtime] broadcast error:", result);
+    }
 }
 
 export async function trackPresence(
-    channel: ReturnType<ReturnType<typeof createClient>["channel"]>,
+    channel: RealtimeChannel,
     userName: string
-) {
-    await channel.track({ userName });
+): Promise<void> {
+    const result = await channel.track({ userName });
+
+    if (result !== "ok") {
+        console.error("[realtime] presence track error:", result);
+    }
 }
 
-// ─── Snapshot (Storage) ─────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────
+// Snapshot (Supabase Storage)
+// ───────────────────────────────────────────────────────────────
+
 export async function saveSnapshot(canvas: HTMLCanvasElement): Promise<void> {
     const supabase = createClient();
-    const blob = await new Promise<Blob>((res) =>
-        canvas.toBlob((b) => res(b!), "image/png")
-    );
 
-    await supabase.storage
+    const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => {
+            if (!b) {
+                return reject(new Error("Failed to create PNG blob from canvas"));
+            }
+            resolve(b);
+        }, "image/png");
+    });
+
+    const { data, error } = await supabase.storage
         .from(SNAPSHOT_BUCKET)
         .upload(SNAPSHOT_KEY, blob, {
             upsert: true,
             contentType: "image/png",
         });
+
+    if (error) {
+        console.error("[snapshot] save error", error);
+    } else {
+        console.log("[snapshot] saved", data);
+    }
 }
 
 export async function loadSnapshot(): Promise<string | null> {
@@ -87,13 +114,23 @@ export async function loadSnapshot(): Promise<string | null> {
     const { data } = supabase.storage
         .from(SNAPSHOT_BUCKET)
         .getPublicUrl(SNAPSHOT_KEY);
-    if (!data?.publicUrl) return null;
-    // cache-bust เพื่อโหลดล่าสุดเสมอ
-    return `${data.publicUrl}?t=${Date.now()}`;
+
+    if (!data?.publicUrl) {
+        console.log("[snapshot] no existing snapshot");
+        return null;
+    }
+
+    // cache-bust เพื่อให้โหลดรูปล่าสุดเสมอ
+    const url = `${data.publicUrl}?t=${Date.now()}`;
+    console.log("[snapshot] load url", url);
+    return url;
 }
 
-// ─── Download final image ────────────────────────────────────────────────────
-export function downloadCanvas(canvas: HTMLCanvasElement) {
+// ───────────────────────────────────────────────────────────────
+// Download canvas as PNG
+// ───────────────────────────────────────────────────────────────
+
+export function downloadCanvas(canvas: HTMLCanvasElement): void {
     const link = document.createElement("a");
     link.download = "picnic-canvas-final.png";
     link.href = canvas.toDataURL("image/png");
