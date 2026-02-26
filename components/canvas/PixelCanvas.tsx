@@ -13,7 +13,7 @@ export type Tool = "pencil" | "eraser" | "fill" | "eyedropper";
 interface PixelCanvasProps {
     tool: Tool;
     color: PixelColor;
-    brushSize: 1 | 2 | 4;
+    brushSize: number;
     onColorPick: (color: PixelColor) => void;
     onStroke: (pixels: Pixel[]) => void;
     userId: string;
@@ -23,6 +23,7 @@ interface PixelCanvasProps {
 export interface PixelCanvasRef {
     getCanvas: () => HTMLCanvasElement | null;
     applyRemotePixels: (pixels: Pixel[]) => void;
+    loadSnapshotFromUrl: (url: string) => void; // ✨ ใหม่
 }
 
 const MIN_ZOOM = 0.25;
@@ -46,6 +47,10 @@ export const PixelCanvas = React.forwardRef<PixelCanvasRef, PixelCanvasProps>(
 
         // ── init offscreen canvas ──────────────────────────────────────────────
         useEffect(() => {
+            // ถ้ามีคนเรียก loadSnapshotFromUrl ก่อนหน้านี้แล้ว
+            // ไม่ต้องสร้าง/ทับ offscreen ซ้ำ
+            if (offscreenRef.current) return;
+
             const off = document.createElement("canvas");
             off.width = CANVAS_WIDTH;
             off.height = CANVAS_HEIGHT;
@@ -58,12 +63,47 @@ export const PixelCanvas = React.forwardRef<PixelCanvasRef, PixelCanvasProps>(
         // ── expose ref ─────────────────────────────────────────────────────────
         React.useImperativeHandle(ref, () => ({
             getCanvas: () => offscreenRef.current,
+
             applyRemotePixels: (pixels: Pixel[]) => {
                 const off = offscreenRef.current;
                 if (!off) return;
                 const ctx = off.getContext("2d")!;
-                pixels.forEach(p => drawPixel(ctx, p));
+                pixels.forEach((p) => drawPixel(ctx, p));
                 renderDisplay();
+            },
+
+            // ✨ โหลด snapshot จาก URL แล้ววาดลง offscreen
+            loadSnapshotFromUrl: (url: string) => {
+                // ถ้ายังไม่มี offscreen ให้สร้างเลย
+                let off = offscreenRef.current;
+                if (!off) {
+                    off = document.createElement("canvas");
+                    off.width = CANVAS_WIDTH;
+                    off.height = CANVAS_HEIGHT;
+                    offscreenRef.current = off;
+                }
+
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+
+                img.onload = () => {
+                    const ctx = off!.getContext("2d");
+                    if (!ctx) return;
+
+                    // เคลียร์ก่อน เผื่อมีอะไรค้างอยู่
+                    ctx.clearRect(0, 0, off!.width, off!.height);
+                    // วาดเต็มพื้นที่ canvas
+                    ctx.drawImage(img, 0, 0, off!.width, off!.height);
+
+                    // ให้จอแสดงผลตาม offscreen
+                    renderDisplay();
+                };
+
+                img.onerror = () => {
+                    console.error("[PixelCanvas] failed to load snapshot image", url);
+                };
+
+                img.src = url;
             },
         }));
 
@@ -251,8 +291,38 @@ export const PixelCanvas = React.forwardRef<PixelCanvasRef, PixelCanvasProps>(
                 tool === "fill" ? "cell" : "crosshair";
 
         return (
-            <div ref={containerRef} className="relative w-full h-full overflow-hidden rounded-xl"
-                style={{ backgroundColor: "#2C1810", backgroundImage: "radial-gradient(circle at 20% 80%, rgba(244,201,212,0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(210,230,246,0.08) 0%, transparent 50%)" }}>
+            <div
+                ref={containerRef}
+                className="relative w-full h-full overflow-hidden rounded-xl"
+                style={{
+                    backgroundColor: "#E0D8C5",
+                    backgroundImage: `
+      /* ช่องสีเขียวทึบ */
+      linear-gradient(
+        0deg,
+        rgba(131, 158, 81, 0.18) 50%,
+        transparent 50%
+      ),
+      linear-gradient(
+        90deg,
+        rgba(131, 158, 81, 0.18) 50%,
+        transparent 50%
+      ),
+
+      /* ลายเฉียงในอีกครึ่งช่อง */
+      repeating-linear-gradient(
+        45deg,
+        rgba(131, 158, 81, 0.22) 0px,
+        rgba(131, 158, 81, 0.22) 2px,
+        transparent 2px,
+        transparent 6px
+      )
+    `,
+                    backgroundSize: "48px 48px, 48px 48px, 48px 48px",
+                    backgroundBlendMode: "multiply",
+                }}
+            >
+
                 <canvas
                     ref={displayRef}
                     className="absolute inset-0"

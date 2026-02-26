@@ -76,6 +76,7 @@ export const THEMES: Record<string, ThemeConfig> = {
         defaultPaper: "cream",
         cssVars: {
             '--theme-bg': '#FDFBF4',
+            '--theme-pattern-rgb': '230, 215, 189',
             '--theme-icon': '#E6D7BD',
             '--theme-btn-bg': '#E6D7BD',
             '--theme-btn-text': '#4A3B32',
@@ -103,6 +104,7 @@ export const THEMES: Record<string, ThemeConfig> = {
         defaultPaper: "cream",
         cssVars: {
             '--theme-bg': '#FFF3F6',
+            '--theme-pattern-rgb': '244, 201, 212',
             '--theme-icon': '#F4C9D4',
             '--theme-btn-bg': '#F4C9D4',
             '--theme-btn-text': '#4A3B32',
@@ -130,6 +132,7 @@ export const THEMES: Record<string, ThemeConfig> = {
         defaultPaper: "cream",
         cssVars: {
             '--theme-bg': '#F4F9FF',
+            '--theme-pattern-rgb': '210, 230, 246',
             '--theme-icon': '#D2E6F6',
             '--theme-btn-bg': '#D2E6F6',
             '--theme-btn-text': '#4A3B32',
@@ -157,6 +160,7 @@ export const THEMES: Record<string, ThemeConfig> = {
         defaultPaper: "cream",
         cssVars: {
             '--theme-bg': '#F4FBF7',
+            '--theme-pattern-rgb': '207, 231, 218',
             '--theme-icon': '#CFE7DA',
             '--theme-btn-bg': '#CFE7DA',
             '--theme-btn-text': '#4A3B32',
@@ -184,6 +188,7 @@ export const THEMES: Record<string, ThemeConfig> = {
         defaultPaper: "cream",
         cssVars: {
             '--theme-bg': '#F8F5FF',
+            '--theme-pattern-rgb': '227, 217, 246',
             '--theme-icon': '#E3D9F6',
             '--theme-btn-bg': '#E3D9F6',
             '--theme-btn-text': '#4A3B32',
@@ -211,6 +216,7 @@ export const THEMES: Record<string, ThemeConfig> = {
         defaultPaper: "oliveMilk",
         cssVars: {
             '--theme-bg': '#FFFBEF',
+            '--theme-pattern-rgb': '246, 231, 184',
             '--theme-icon': '#F6E7B8',
             '--theme-btn-bg': '#F6E7B8',
             '--theme-btn-text': '#4A3B32',

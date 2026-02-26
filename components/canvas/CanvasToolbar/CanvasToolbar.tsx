@@ -1,268 +1,155 @@
-// components/canvas/CanvasToolbar.tsx
+// components/canvas/CanvasToolbar/CanvasToolbar.tsx
 "use client";
 
-import React, { memo } from "react";
+import React, { memo, useState, useRef, useCallback } from "react";
 import { Pencil, Eraser, PaintBucket, Pipette, Download } from "lucide-react";
 import { PALETTE, type PixelColor } from "@/lib/pixelEngine";
 import type { Tool } from "../PixelCanvas";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export type { Tool };
-
-export type BrushSize = 1 | 2 | 4;
+export type BrushSize = 1 | 2 | 5;
 
 export interface CanvasToolbarProps {
     tool: Tool;
     color: PixelColor;
-    brushSize: BrushSize;
+    brushSize: number;
     onToolChange: (tool: Tool) => void;
     onColorChange: (color: PixelColor) => void;
-    onBrushChange: (size: BrushSize) => void;
+    onBrushChange: (size: number) => void;
     onDownload: () => void;
     onlineUsers: string[];
     canDownload: boolean;
+    recentColors?: PixelColor[];
 }
 
-/**
- * Internal config
- */
-const TOOL_CONFIG: { id: Tool; label: string; icon: React.ReactNode }[] = [
-    { id: "pencil", icon: <Pencil size={15} />, label: "Pen" },
-    { id: "eraser", icon: <Eraser size={15} />, label: "Eraser" },
-    { id: "fill", icon: <PaintBucket size={15} />, label: "Fill" },
-    { id: "eyedropper", icon: <Pipette size={15} />, label: "Pick" },
+// ✨ Full botanical palette
+const FULL_PALETTE: PixelColor[] = [
+    // Row 1 – Pink → Warm
+    '#EE7EA0', '#FFA9BA', '#FFD7D6', '#EA7D70', '#F69F95', '#FFAF6E',
+
+    // Row 2 – Peach → Yellow → Soft Green
+    '#FFCC80', '#FFE2A6', '#BCC07B', '#DBE098', '#D5E2D3', '#ABCDDE',
+
+    // Row 3 – Blue → Lavender
+    '#7D8BE0', '#B5BEF5', '#D5EDF8', '#9A81B0', '#CDBDEB', '#8E715B',
+
+    // Row 4 – Brown → Cream → Base
+    '#C9A98D', '#E5DACA', '#F1ECEA', '#E1CFCA', '#B19F9A', '#4F3F3E',
+
+    // Row 5 – Neutrals / Grayscale
+    '#FFFFFF', '#CCCCCC', '#999999', '#666666', '#333333', '#000000',
 ];
 
-const BRUSH_SIZES: { size: BrushSize; dot: number; label: string }[] = [
-    { size: 1, dot: 4, label: "Fine" },
-    { size: 2, dot: 8, label: "Medium" },
-    { size: 4, dot: 13, label: "Bold" },
+const TOOL_CONFIG: { id: Tool; icon: React.ReactNode; label: string }[] = [
+    { id: "pencil", icon: <Pencil size={16} strokeWidth={1.8} />, label: "Pencil" },
+    { id: "eraser", icon: <Eraser size={16} strokeWidth={1.8} />, label: "Eraser" },
+    { id: "fill", icon: <PaintBucket size={16} strokeWidth={1.8} />, label: "Fill" },
+    { id: "eyedropper", icon: <Pipette size={16} strokeWidth={1.8} />, label: "Pick Color" },
 ];
 
-// limit palette to a curated subset so the board feels cohesive
-const CURATED_PALETTE: PixelColor[] = (PALETTE as PixelColor[]).slice(0, 12);
+const PRESET_SIZES: { size: BrushSize; label: string }[] = [
+    { size: 1, label: "1px" },
+    { size: 2, label: "2px" },
+    { size: 5, label: "5px" },
+];
 
-interface SectionProps {
-    title: string;
-    children: React.ReactNode;
-}
+// ────────────────────────────────────────────────────────────
+// Sub-components
+// ────────────────────────────────────────────────────────────
 
-/**
- * Decorative "paper" section wrapper used inside the toolbar.
- */
-const Section: React.FC<SectionProps> = ({ title, children }) => {
-    return (
-        <section className="flex flex-col gap-2">
-            <p
-                className="text-[9px] uppercase tracking-[0.18em] font-bold px-1"
-                style={{ color: "rgba(139,94,82,0.55)", fontFamily: "'Noto Sans', sans-serif" }}
-            >
-                {title}
-            </p>
-            {children}
-            <div
-                className="mt-1 h-px mx-1"
-                style={{ backgroundColor: "rgba(196,168,130,0.18)" }}
-            />
-        </section>
-    );
-};
+const Divider = () => (
+    <div className="w-full h-px my-1" style={{ backgroundColor: "rgba(196,168,130,0.18)" }} />
+);
 
-/**
- * Individual tool button (Pen, Eraser, etc)
- */
-interface ToolButtonProps {
-    active: boolean;
-    icon: React.ReactNode;
-    label: string;
-    onClick: () => void;
-}
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+    <p className="text-[9px] uppercase tracking-[0.2em] mb-2 px-0.5"
+        style={{ color: "rgba(139,94,82,0.45)", fontFamily: "var(--font-noto-sans-thai), sans-serif" }}>
+        {children}
+    </p>
+);
 
-const ToolButton = memo(function ToolButton(props: ToolButtonProps) {
-    const { active, icon, label, onClick } = props;
-
+const ToolButton = memo(function ToolButton({
+    active, icon, label, onClick,
+}: { active: boolean; icon: React.ReactNode; label: string; onClick: () => void }) {
     return (
         <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
             onClick={onClick}
-            className="relative flex-1 h-9 rounded-xl flex items-center gap-2.5 px-3 text-left transition-all"
-            style={{
-                backgroundColor: active ? "rgba(244,201,212,0.45)" : "transparent",
-                color: "#8B5E52",
-            }}
+            title={label}
             type="button"
+            className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            style={{
+                backgroundColor: active ? "rgba(242,198,194,0.55)" : "rgba(253,251,244,0.5)",
+                color: active ? "#8B4559" : "rgba(74,59,50,0.55)",
+                boxShadow: active
+                    ? "inset 0 1px 3px rgba(139,69,89,0.15), 0 1px 0 rgba(255,255,255,0.9)"
+                    : "inset 0 1px 0 rgba(255,255,255,0.7)",
+                border: active ? "1px solid rgba(242,198,194,0.6)" : "1px solid rgba(196,168,130,0.2)",
+            }}
         >
             {active && (
-                <span
-                    className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full"
-                    style={{ backgroundColor: "#E42E57" }}
+                <motion.span
+                    layoutId="tool-pip"
+                    className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+                    style={{ backgroundColor: "#E87A9A" }}
                 />
             )}
-            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-white/80 shadow-sm">
-                {icon}
-            </span>
-            <span
-                className="text-[11px] tracking-wide"
-                style={{ fontFamily: "'Noto Sans', sans-serif" }}
-            >
-                {label}
-            </span>
+            {icon}
         </motion.button>
     );
 });
 
-interface BrushButtonProps {
-    active: boolean;
-    dotSize: number;
-    label: string;
-    onClick: () => void;
-}
-
-const BrushButton = memo(function BrushButton(props: BrushButtonProps) {
-    const { active, dotSize, label, onClick } = props;
-
+const ColorSwatch = memo(function ColorSwatch({
+    color, active, onClick,
+}: { color: PixelColor; active: boolean; onClick: () => void }) {
     return (
         <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={onClick}
-            className="w-full h-9 rounded-xl flex items-center gap-3 px-3 transition-all"
-            style={{
-                backgroundColor: active ? "rgba(244,201,212,0.45)" : "transparent",
-                color: "#8B5E52",
-            }}
             type="button"
-        >
-            <span className="w-6 h-6 rounded-full bg-white/85 flex items-center justify-center">
-                <span
-                    className="rounded-full"
-                    style={{
-                        width: dotSize,
-                        height: dotSize,
-                        backgroundColor: "#8B5E52",
-                    }}
-                />
-            </span>
-            <span
-                className="text-[11px]"
-                style={{ fontFamily: "'Noto Sans', sans-serif" }}
-            >
-                {label}
-            </span>
-        </motion.button>
-    );
-});
-
-interface ColorSwatchProps {
-    color: PixelColor;
-    active: boolean;
-    onClick: () => void;
-}
-
-const ColorSwatch = memo(function ColorSwatch(props: ColorSwatchProps) {
-    const { color, active, onClick } = props;
-
-    return (
-        <button
-            type="button"
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.95 }}
             onClick={onClick}
-            className="w-5 h-5 rounded-full border transition-transform"
+            className="rounded-md border transition-all"
             style={{
                 backgroundColor: color,
-                borderColor: active ? "rgba(74,59,50,0.7)" : "rgba(0,0,0,0.06)",
+                width: 18, height: 18,
+                borderColor: active ? "#8B5E52" : "rgba(0,0,0,0.08)",
+                boxShadow: active ? `0 0 0 2px rgba(253,251,244,0.95), 0 0 0 3px #8B5E52` : "none",
                 transform: active ? "scale(1.15)" : "scale(1)",
-                boxShadow: active ? "0 0 0 1px rgba(253,251,244,0.9)" : "none",
             }}
-            aria-label={`Select color ${color}`}
+            aria-label={color}
         />
     );
 });
 
-const OnlineUsersBadge: React.FC<{ onlineUsers: string[] }> = ({ onlineUsers }) => {
-    if (!onlineUsers.length) return null;
 
-    const count = onlineUsers.length;
-    const label = count === 1 ? "guest" : "guests";
 
-    return (
-        <div className="mt-2 px-2 py-1 rounded-full inline-flex items-center gap-1.5 bg-white/70 shadow-sm">
-            <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: "#7CB972" }}
-            />
-            <span
-                className="text-[10px]"
-                style={{ fontFamily: "'Noto Sans', sans-serif", color: "#8B5E52" }}
-            >
-                {count} {label} in the garden
-            </span>
-        </div>
-    );
-};
+// ────────────────────────────────────────────────────────────
+// Main CanvasToolbar
+// ────────────────────────────────────────────────────────────
+export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
+    tool, color, brushSize, onToolChange, onBrushChange, onColorChange,
+    onDownload, onlineUsers, canDownload, recentColors = [],
+}) => {
+    const colorInputRef = useRef<HTMLInputElement>(null);
 
-/**
- * Main toolbar component.
- * Visually designed as a cute stationery card pinned next to the guestbook canvas.
- */
-export const CanvasToolbar: React.FC<CanvasToolbarProps> = (props) => {
-    const {
-        tool,
-        color,
-        brushSize,
-        onToolChange,
-        onBrushChange,
-        onColorChange,
-        onDownload,
-        onlineUsers,
-        canDownload,
-    } = props;
+    const handleColorSelect = useCallback((c: PixelColor) => {
+        onColorChange(c);
+    }, [onColorChange]);
+
+    const showBrush = tool === "pencil" || tool === "eraser";
 
     return (
-        <aside
-            className="relative flex flex-col gap-4 p-4 rounded-2xl w-[240px] min-w-[240px]"
-            style={{
-                backgroundColor: "#FFFDF9",
-                boxShadow: "0 10px 30px rgba(139,94,82,0.18)",
-                border: "1px solid rgba(139,94,82,0.14)",
-            }}
+        <div
+            className="flex flex-col gap-3 py-4 px-3 select-none"
+            style={{ fontFamily: "var(--font-noto-sans-thai), sans-serif" }}
         >
-            {/* decorative tape */}
-            <div
-                className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2"
-                style={{
-                    width: 60,
-                    height: 18,
-                    borderRadius: 4,
-                    backgroundColor: "#FFE4B5",
-                    opacity: 0.6,
-                    transform: "translateX(-50%) rotate(-3deg)",
-                    boxShadow: "0 4px 10px rgba(0,0,0,0.12)",
-                }}
-            />
-
-            {/* header */}
-            <div className="flex items-center justify-between gap-2 mb-1">
-                <div className="flex flex-col">
-                    <span
-                        className="text-[10px] uppercase tracking-[0.22em]"
-                        style={{ fontFamily: "'Noto Sans', sans-serif", color: "rgba(139,94,82,0.7)" }}
-                    >
-                        Picnic Tools
-                    </span>
-                    <span
-                        className="text-[11px]"
-                        style={{ fontFamily: "'Noto Serif', serif", color: "#8B5E52" }}
-                    >
-                        Write your wish 💌
-                    </span>
-                </div>
-            </div>
-
-            {/* tools */}
-            <Section title="Write With">
-                <div className="grid grid-cols-2 gap-1.5">
-                    {TOOL_CONFIG.map(({ id, label, icon }) => (
+            {/* ── TOOLS ── */}
+            <section>
+                <SectionLabel>Tools</SectionLabel>
+                <div className="grid grid-cols-4 gap-1.5">
+                    {TOOL_CONFIG.map(({ id, icon, label }) => (
                         <ToolButton
                             key={id}
                             active={tool === id}
@@ -272,120 +159,169 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = (props) => {
                         />
                     ))}
                 </div>
-            </Section>
+            </section>
 
-            {/* brush size */}
-            <Section title="Brush">
-                <div className="flex flex-col gap-0.5">
-                    {BRUSH_SIZES.map(({ size, dot, label }) => (
-                        <BrushButton
-                            key={size}
-                            active={brushSize === size}
-                            dotSize={dot}
-                            label={label}
-                            onClick={() => onBrushChange(size)}
-                        />
-                    ))}
-                </div>
-            </Section>
+            <Divider />
 
-            {/* color */}
-            <Section title="Color">
-                <div className="flex flex-col gap-2">
-                    {/* current color card */}
-                    <div className="flex items-center gap-2">
-                        <div
-                            className="w-10 h-10 rounded-xl shadow-inner border"
+            {/* ── BRUSH SIZE (pencil/eraser only) ── */}
+            <AnimatePresence>
+                {showBrush && (
+                    <motion.section
+                        key="brush"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        style={{ overflow: "hidden" }}
+                    >
+                        <SectionLabel>Size — {brushSize}px</SectionLabel>
+
+                        {/* Preset buttons */}
+                        <div className="flex gap-1.5 mb-2.5">
+                            {PRESET_SIZES.map(({ size, label }) => (
+                                <motion.button
+                                    key={size}
+                                    type="button"
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => onBrushChange(size)}
+                                    className="flex-1 py-1 rounded-lg text-[10px] font-bold transition-all"
+                                    style={{
+                                        backgroundColor: brushSize === size
+                                            ? "rgba(242,198,194,0.55)"
+                                            : "rgba(253,251,244,0.5)",
+                                        color: brushSize === size ? "#8B4559" : "rgba(74,59,50,0.5)",
+                                        border: brushSize === size
+                                            ? "1px solid rgba(242,198,194,0.6)"
+                                            : "1px solid rgba(196,168,130,0.2)",
+                                    }}
+                                >
+                                    {label}
+                                </motion.button>
+                            ))}
+                        </div>
+
+                        {/* Slider 1–10 */}
+                        <div className="relative px-0.5">
+                            <input
+                                type="range"
+                                min={1}
+                                max={10}
+                                step={1}
+                                value={brushSize}
+                                onChange={(e) => onBrushChange(Number(e.target.value))}
+                                className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                                style={{
+                                    accentColor: "#E87A9A",
+                                    background: `linear-gradient(to right, #E87A9A ${(brushSize - 1) / 9 * 100}%, rgba(196,168,130,0.25) ${(brushSize - 1) / 9 * 100}%)`,
+                                }}
+                            />
+                            <div className="flex justify-between mt-1">
+                                <span className="text-[8px]" style={{ color: "rgba(139,94,82,0.35)" }}>1</span>
+                                <span className="text-[8px]" style={{ color: "rgba(139,94,82,0.35)" }}>10</span>
+                            </div>
+                        </div>
+
+                        <Divider />
+                    </motion.section>
+                )}
+            </AnimatePresence>
+
+            {/* ── COLOR ── */}
+            <section className="relative">
+                <SectionLabel>Color</SectionLabel>
+
+                {/* Current color — คลิกสี → native color picker เปิดทันที */}
+                <div className="flex items-center gap-2 mb-3">
+                    <div className="relative w-10 h-10 flex-shrink-0">
+                        <motion.div
+                            whileHover={{ scale: 1.04 }}
+                            whileTap={{ scale: 0.96 }}
+                            className="w-10 h-10 rounded-xl border cursor-pointer"
                             style={{
                                 backgroundColor: color,
-                                borderColor: "rgba(74,59,50,0.2)",
-                                boxShadow:
-                                    "inset 0 0 0 1px rgba(253,251,244,0.6), 0 4px 10px rgba(0,0,0,0.06)",
+                                borderColor: "rgba(74,59,50,0.15)",
+                                boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.5), 0 4px 10px rgba(0,0,0,0.06)",
                             }}
+                            onClick={() => colorInputRef.current?.click()}
                         />
-                        <div className="flex flex-col">
-                            <span
-                                className="text-[10px] uppercase tracking-[0.14em]"
-                                style={{
-                                    fontFamily: "'Noto Sans', sans-serif",
-                                    color: "rgba(139,94,82,0.7)",
-                                }}
-                            >
-                                Current
-                            </span>
-                            <span
-                                className="text-[11px]"
-                                style={{
-                                    fontFamily: "'Noto Serif', serif",
-                                    color: "#8B5E52",
-                                }}
-                            >
-                                Your ink color
-                            </span>
-                        </div>
+                        {/* ✨ hidden native input — กด swatch ด้านบนแล้ว trigger มา */}
+                        <input
+                            ref={colorInputRef}
+                            type="color"
+                            value={color}
+                            onChange={(e) => handleColorSelect(e.target.value as PixelColor)}
+                            className="absolute inset-0 opacity-0 w-0 h-0 pointer-events-none"
+                            tabIndex={-1}
+                        />
                     </div>
-
-                    {/* palette */}
-                    <div className="mt-1 grid grid-cols-6 gap-1.5">
-                        {CURATED_PALETTE.map((swatch) => (
-                            <ColorSwatch
-                                key={swatch}
-                                color={swatch}
-                                active={color === swatch}
-                                onClick={() => onColorChange(swatch)}
-                            />
-                        ))}
+                    <div className="flex flex-col">
+                        <span className="text-[9px] uppercase tracking-[0.15em]"
+                            style={{ color: "rgba(139,94,82,0.45)" }}>Current</span>
+                        <span className="text-[10px] font-mono" style={{ color: "#8B5E52" }}>{color}</span>
+                        <span className="text-[9px]" style={{ color: "rgba(139,94,82,0.4)" }}>
+                            tap to customize
+                        </span>
                     </div>
                 </div>
-            </Section>
 
-            {/* footer: status + actions */}
-            <div className="mt-1 flex flex-col gap-2 pt-1">
-                {/* status line */}
-                <p
-                    className="text-[10px]"
-                    style={{ fontFamily: "'Noto Serif', serif", color: "rgba(139,94,82,0.8)" }}
-                >
-                    {tool === "pencil"
-                        ? "Pen"
-                        : tool === "eraser"
-                            ? "Eraser"
-                            : tool === "fill"
-                                ? "Fill"
-                                : "Pick"}{" "}
-                    ·{" "}
-                    {brushSize === 1
-                        ? "Fine"
-                        : brushSize === 2
-                            ? "Medium"
-                            : "Bold"}
-                </p>
-
-                <OnlineUsersBadge onlineUsers={onlineUsers} />
-
-                {canDownload && (
-                    <motion.button
-                        whileHover={{
-                            scale: 1.03,
-                            boxShadow: "0 8px 22px rgba(139,94,82,0.28)",
-                        }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={onDownload}
-                        type="button"
-                        className="w-full h-9 rounded-full flex items-center justify-center gap-2 mt-1"
-                        style={{ backgroundColor: "#E7B8C7", color: "#4A3B32" }}
-                    >
-                        <Download size={14} />
-                        <span
-                            className="text-[11px] font-bold"
-                            style={{ fontFamily: "'Noto Sans', sans-serif" }}
-                        >
-                            Post My Wish
-                        </span>
-                    </motion.button>
+                {/* Recent colors */}
+                {recentColors.length > 0 && (
+                    <>
+                        <p className="text-[9px] uppercase tracking-[0.2em] mb-1.5"
+                            style={{ color: "rgba(139,94,82,0.45)" }}>Recent</p>
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                            {recentColors.map((c) => (
+                                <ColorSwatch key={c} color={c} active={color === c} onClick={() => handleColorSelect(c)} />
+                            ))}
+                        </div>
+                        <Divider />
+                    </>
                 )}
-            </div>
-        </aside>
+
+                {/* Full palette */}
+                <p className="text-[9px] uppercase tracking-[0.2em] mb-1.5 mt-2"
+                    style={{ color: "rgba(139,94,82,0.45)" }}>Palette</p>
+                <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(6, 1fr)" }}>
+                    {FULL_PALETTE.map((c) => (
+                        <ColorSwatch key={c} color={c} active={color === c} onClick={() => handleColorSelect(c)} />
+                    ))}
+                </div>
+            </section>
+
+            <Divider />
+
+            {/* ── ONLINE USERS ── */}
+            {onlineUsers.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: "#7CB972" }} />
+                    <span className="text-[10px]" style={{ color: "rgba(139,94,82,0.6)" }}>
+                        {onlineUsers.length} {onlineUsers.length === 1 ? "guest" : "guests"} in the garden
+                    </span>
+                </div>
+            )}
+
+            {/* ── DOWNLOAD ── */}
+            {canDownload && (
+                <motion.button
+                    whileHover={{ scale: 1.02, boxShadow: "0 6px 20px rgba(139,94,82,0.2)" }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={onDownload}
+                    type="button"
+                    className="w-full h-9 rounded-full flex items-center justify-center gap-2"
+                    style={{
+                        background: "linear-gradient(135deg, rgba(242,198,194,0.7) 0%, rgba(213,237,248,0.7) 100%)",
+                        border: "1px solid rgba(242,198,194,0.5)",
+                        color: "#6B4C43",
+                    }}
+                >
+                    <Download size={13} strokeWidth={2} />
+                    <span className="text-[11px] font-semibold tracking-wide"
+                        style={{ fontFamily: "var(--font-noto-sans-thai), sans-serif" }}>
+                        Save Canvas
+                    </span>
+                </motion.button>
+            )}
+        </div>
     );
 };
 

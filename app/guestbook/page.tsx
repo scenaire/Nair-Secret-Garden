@@ -84,7 +84,17 @@ export default function GuestbookPage() {
     return (
         <main
             className="min-h-screen px-6 md:px-12 relative transition-colors duration-1000 bg-[var(--theme-bg)]"
-            style={currentTheme.cssVars as React.CSSProperties}
+            style={{
+                ...(currentTheme.cssVars as React.CSSProperties),
+                backgroundColor: "var(--theme-bg)", // ✨ ใช้สีพื้นหลังตามตีม
+                backgroundImage: `
+                    linear-gradient(0deg, rgba(var(--theme-pattern-rgb), 0.18) 50%, transparent 50%),
+                    linear-gradient(90deg, rgba(var(--theme-pattern-rgb), 0.18) 50%, transparent 50%),
+                    repeating-linear-gradient(45deg, rgba(var(--theme-pattern-rgb), 0.22) 0px, rgba(var(--theme-pattern-rgb), 0.22) 2px, transparent 2px, transparent 6px)
+                `,
+                backgroundSize: "60px 60px", // ✨ กำหนดขนาดของตาราง (ถ้าอยากให้ช่องเล็กลง ลองเปลี่ยนเป็น 40px 40px ดูนะคะ)
+                backgroundBlendMode: "normal"
+            }}
         >
             <Navbar isLoggedIn={isLoggedIn} user={user} onLogin={loginWithTwitch} onLogout={logout} />
 

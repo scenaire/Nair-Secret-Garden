@@ -61,7 +61,7 @@ export const PolaroidHero: React.FC = () => {
         <div className="relative">
             <PolaroidFrame caption="Nair's Secret Garden ✦">
                 <img
-                    src="/images/event-hero.png"
+                    src="/images/landing/event-hero.png"
                     alt="Nair's Secret Garden"
                     className="absolute inset-0 w-full h-full object-cover"
                 />

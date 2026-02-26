@@ -45,13 +45,15 @@ export default function CanvasPage() {
         useAuth();
 
     const [tool, setTool] = useState<Tool>("pencil");
-    const [color, setColor] = useState<PixelColor>("#FF8FAB");
-    const [brushSize, setBrushSize] = useState<1 | 2 | 4>(1);
+    const [color, setColor] = useState<PixelColor>("#4b3a2e");
+    const [brushSize, setBrushSize] = useState<number>(1);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
     const [isLoading, setIsLoading] = useState(true);
     const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+    const [recentColors, setRecentColors] = useState<PixelColor[]>([]);
 
-    const canvasRef = useRef<PixelCanvasRef>(null);
+
+    const canvasRef = useRef<PixelCanvasRef | null>(null);
     const channelRef = useRef<ReturnType<typeof subscribeToCanvas> | null>(null);
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -63,44 +65,53 @@ export default function CanvasPage() {
         "Guest";
 
     // ───────────────────────────────────────────────────────────────
-    // Load snapshot on mount
+    // Load snapshot on mount (robust version)
     // ───────────────────────────────────────────────────────────────
     useEffect(() => {
-        let isMounted = true;
+        let cancelled = false;
 
-        loadSnapshot().then((url) => {
-            if (!isMounted) return;
+        async function initSnapshot() {
+            try {
+                // เผื่อมีกรณีที่ isLoading ไม่ได้ถูก set เป็น true มาก่อน
+                setIsLoading(true);
 
-            if (!url) {
-                setIsLoading(false);
-                return;
+                const url = await loadSnapshot();
+
+                if (cancelled) return;
+
+                // ยังไม่เคยมี snapshot -> ถือว่าโหลดเสร็จแต่มันคือกระดาษเปล่า
+                if (!url) {
+                    return; // ไปจบที่ finally -> isLoading = false
+                }
+
+                const applyToCanvas = () => {
+                    if (cancelled) return;
+                    const inst = canvasRef.current;
+                    if (!inst) return;
+                    // ใช้ method ใน PixelCanvas ให้จัดการวาด snapshot เอง
+                    inst.loadSnapshotFromUrl(url);
+                };
+
+                // ถ้ายังไม่มี instance ให้รอให้ PixelCanvas mount ก่อนค่อย apply
+                if (!canvasRef.current) {
+                    requestAnimationFrame(applyToCanvas);
+                } else {
+                    applyToCanvas();
+                }
+            } catch (err) {
+                // กันทุกกรณี error ไม่ให้ค้าง loading
+                console.error("[snapshot] init failed", err);
+            } finally {
+                if (!cancelled) {
+                    setIsLoading(false);
+                }
             }
+        }
 
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.onload = () => {
-                const off = canvasRef.current?.getCanvas();
-                if (!off) {
-                    setIsLoading(false);
-                    return;
-                }
-                const ctx = off.getContext("2d");
-                if (!ctx) {
-                    setIsLoading(false);
-                    return;
-                }
-                ctx.drawImage(img, 0, 0);
-                setIsLoading(false);
-            };
-            img.onerror = () => {
-                console.error("[snapshot] image load failed", url);
-                setIsLoading(false);
-            };
-            img.src = url;
-        });
+        void initSnapshot();
 
         return () => {
-            isMounted = false;
+            cancelled = true;
         };
     }, []);
 
@@ -154,9 +165,16 @@ export default function CanvasPage() {
     // ───────────────────────────────────────────────────────────────
     const handleStroke = useCallback(
         async (pixels: Pixel[]) => {
-            // ถ้าไม่มี channel หรือไม่ได้ login ก็วาดแค่ local
+            // ✨ track recent colors ก่อนเช็ค channel
+            const strokeColor = pixels[0]?.color;
+            if (strokeColor && !strokeColor.startsWith('FILL:') && strokeColor !== '#FFFFFF') {
+                setRecentColors(prev => {
+                    const filtered = prev.filter(x => x !== strokeColor);
+                    return [strokeColor as PixelColor, ...filtered].slice(0, 8);
+                });
+            }
+
             if (!channelRef.current || !userId) {
-                // แค่ตั้งสถานะ pending save ไว้ เผื่ออนาคตอยากเซฟ local-only
                 setSaveStatus("pending");
                 return;
             }
@@ -304,10 +322,13 @@ export default function CanvasPage() {
                     <div className="flex flex-1 overflow-hidden gap-0">
                         {/* Toolbar ด้านซ้าย */}
                         <div
-                            className="w-[260px] min-w-[260px] flex-shrink-0 overflow-y-auto py-3 px-3"
+                            className="w-[260px] min-w-[260px] flex-shrink-0 py-3 px-3"
                             style={{
                                 backgroundColor: "rgba(253,251,244,0.9)",
                                 borderRight: "1px solid rgba(180,140,120,0.12)",
+                                zIndex: 10,
+                                position: "relative",
+                                overflowY: "visible",
                             }}
                         >
                             <CanvasToolbar
@@ -320,6 +341,7 @@ export default function CanvasPage() {
                                 onDownload={handleDownload}
                                 onlineUsers={onlineUsers}
                                 canDownload={true}
+                                recentColors={recentColors}
                             />
                         </div>
 
