@@ -14,6 +14,7 @@ export interface StrokeMessage {
 }
 
 // ─── Realtime broadcast ─────────────────────────────────────────────────────
+// lib/canvasSync.ts
 export function subscribeToCanvas(
     onStroke: (msg: StrokeMessage) => void,
     onPresenceChange: (users: string[]) => void
@@ -21,11 +22,15 @@ export function subscribeToCanvas(
     const supabase = createClient();
 
     const channel = supabase.channel(CHANNEL_NAME, {
-        config: { broadcast: { self: false } },
+        config: {
+            broadcast: { self: false },
+            presence: { key: "userName" }, // key อะไรก็ได้ที่ stable
+        },
     });
 
     channel
         .on("broadcast", { event: "stroke" }, ({ payload }) => {
+            console.log("[realtime] stroke received", payload);
             onStroke(payload as StrokeMessage);
         })
         .on("presence", { event: "sync" }, () => {
@@ -33,9 +38,13 @@ export function subscribeToCanvas(
             const users = Object.values(state)
                 .flat()
                 .map((u) => u.userName);
+            console.log("[realtime] presence sync", users);
             onPresenceChange(users);
-        })
-        .subscribe();
+        });
+
+    channel.subscribe((status) => {
+        console.log("[realtime] channel status:", status);
+    });
 
     return channel;
 }

@@ -7,7 +7,8 @@ export interface StickerData {
     id: string;
     content: string;
     xPercent: number;
-    yPercent: number; // ✨ เปลี่ยนจาก yPx → yPercent เพื่อให้ตำแหน่งไม่เลื่อนต่างจอ
+    yPercent: number;
+    yPx?: number; // backward compat สำหรับ draft เก่า
     widthPercent: number;
     rotation: number;
 }

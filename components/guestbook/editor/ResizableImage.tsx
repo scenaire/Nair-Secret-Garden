@@ -12,20 +12,17 @@ declare module '@tiptap/core' {
     }
 }
 
-// 1. หน้าตาของรูปภาพ (React Component)
 const ImageNode = (props: any) => {
     const { node, updateAttributes, selected } = props;
     const { src, alt, width, textAlign } = node.attrs;
     const imgRef = useRef<HTMLImageElement>(null);
 
-    // ฟังก์ชันคำนวณตอนลากเมาส์ย่อ-ขยาย
     const handleMouseDown = (e: React.MouseEvent) => {
         e.preventDefault();
         const startX = e.pageX;
         const startWidth = imgRef.current?.clientWidth || 0;
 
         const onMouseMove = (moveEvent: MouseEvent) => {
-            // คำนวณความกว้างใหม่ (บังคับไม่ให้เล็กกว่า 100px)
             const newWidth = Math.max(100, startWidth + (moveEvent.pageX - startX));
             updateAttributes({ width: newWidth });
         };
@@ -39,8 +36,7 @@ const ImageNode = (props: any) => {
         document.addEventListener('mouseup', onMouseUp);
     };
 
-    // ดึงค่าการจัดหน้าจากปุ่ม Align มาแปลงเป็นคลาส Tailwind
-    let alignClass = "flex justify-center"; // ค่าตั้งต้นคือตรงกลาง
+    let alignClass = "flex justify-center";
     if (textAlign === 'left') alignClass = "flex justify-start";
     if (textAlign === 'right') alignClass = "flex justify-end";
 
@@ -57,8 +53,6 @@ const ImageNode = (props: any) => {
                     )}
                     style={{ width: '100%', height: 'auto', display: 'block' }}
                 />
-
-                {/* ✨ จุดกลมๆ สำหรับจับลาก (โชว์เฉพาะตอนคลิกรูป) */}
                 {selected && (
                     <div
                         className="absolute -right-2 -bottom-2 w-5 h-5 bg-[#F2C6C2] border-2 border-[#FFFDF9] rounded-full cursor-nwse-resize z-10 hover:scale-110 shadow-sm transition-transform"
@@ -70,23 +64,65 @@ const ImageNode = (props: any) => {
     );
 };
 
-// 2. ตั้งค่า Tiptap Extension
 export const ResizableImage = Node.create({
     name: 'resizableImage',
-    group: 'block', // 🚨 สำคัญ: ต้องเป็น block ถึงจะจัด ซ้าย-กลาง-ขวา ได้
+    group: 'block',
     draggable: true,
 
     addAttributes() {
         return {
             src: { default: null },
             alt: { default: null },
-            width: { default: '50%' }, // ตั้งขนาดเริ่มต้นที่ 50% ของหน้ากระดาษ
-            textAlign: { default: 'center' }, // เชื่อมกับ Extension TextAlign
+            width: { default: '50%' },
+            textAlign: { default: 'center' },
         };
     },
 
-    parseHTML() { return [{ tag: 'img[src]' }]; },
-    renderHTML({ HTMLAttributes }) { return ['img', mergeAttributes(HTMLAttributes)]; },
+    parseHTML() {
+        return [{
+            tag: 'div[data-type="resizable-image"]',
+            getAttrs: (el) => {
+                const div = el as HTMLElement;
+                const img = div.querySelector('img');
+                return {
+                    src: img?.getAttribute('src'),
+                    alt: img?.getAttribute('alt'),
+                    width: img?.style.width || '50%',
+                    textAlign: div.getAttribute('data-align') || 'center',
+                };
+            }
+        }, {
+            // ✨ backward compat: parse <img> เดิมที่เคยเซฟไว้
+            tag: 'img[src]',
+            getAttrs: (el) => {
+                const img = el as HTMLImageElement;
+                return {
+                    src: img.getAttribute('src'),
+                    alt: img.getAttribute('alt'),
+                    width: img.style.width || img.getAttribute('width') || '50%',
+                    textAlign: img.getAttribute('data-align') || 'center',
+                };
+            }
+        }];
+    },
+
+    // ✨ renderHTML เป็น div wrapper เพื่อให้ MyGuestbookPage อ่าน alignment ได้
+    renderHTML({ HTMLAttributes }) {
+        const { src, alt, width, textAlign } = HTMLAttributes;
+        return [
+            'div',
+            {
+                'data-type': 'resizable-image',
+                'data-align': textAlign || 'center',
+                style: `display:flex; justify-content:${textAlign === 'left' ? 'flex-start'
+                        : textAlign === 'right' ? 'flex-end'
+                            : 'center'
+                    }; width:100%; margin:1rem 0;`
+            },
+            ['img', mergeAttributes({ src, alt, style: `width:${typeof width === 'number' ? `${width}px` : (width || '50%')}; max-width:100%; height:auto; display:block; border-radius:0.5rem;` })]
+        ];
+    },
+
     addNodeView() { return ReactNodeViewRenderer(ImageNode); },
 
     addCommands() {

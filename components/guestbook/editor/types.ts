@@ -4,7 +4,8 @@ export interface StickerData {
     id: string;
     content: string;
     xPercent: number;
-    yPx: number;
+    yPercent: number;
+    yPx?: number; // backward compat สำหรับ draft เก่า
     widthPercent: number;
     rotation: number;
 }

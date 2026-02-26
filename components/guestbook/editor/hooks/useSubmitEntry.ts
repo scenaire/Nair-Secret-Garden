@@ -44,7 +44,6 @@ export function useSubmitEntry() {
 
             if (entryError) throw entryError;
 
-            // ลบ sticker เก่าออกก่อน แล้ว insert ใหม่
             const { error: deleteError } = await supabase
                 .from('guestbook_stickers')
                 .delete()
@@ -56,7 +55,8 @@ export function useSubmitEntry() {
                     entry_id: entry.id,
                     sticker_type: s.content,
                     x_position: s.xPercent,
-                    y_position: s.yPercent, // ✨ เซฟเป็น percent แล้ว
+                    // ✨ รองรับ draft เก่าที่ยังมี yPx อยู่ใน localStorage
+                    y_position: s.yPercent ?? (s as any).yPx ?? 0,
                     rotation: s.rotation,
                     scale: s.widthPercent || 25,
                     z_index: 10

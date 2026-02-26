@@ -39,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th" className={`${cormorant.variable} ${notoSans.variable}  ${notoSerif.variable} `}>
+    <html lang="th" className={`${cormorant.variable} ${playpen_sans_thai.variable} ${notoSans.variable}  ${notoSerif.variable} `}>
       <body suppressHydrationWarning>
         {children}
       </body>

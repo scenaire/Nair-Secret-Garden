@@ -45,6 +45,9 @@ export default function GuestbookPage() {
     useEffect(() => {
         if (hasEntry && savedData) {
             setViewMode('read');
+            if (savedData.theme) {
+                setActiveTheme(savedData.theme as ThemeKey);
+            }
         }
     }, [hasEntry, savedData]);
 
@@ -108,9 +111,7 @@ export default function GuestbookPage() {
                                         onError={(e) => e.currentTarget.style.display = 'none'}
                                         className="absolute inset-0 w-full h-full object-cover opacity-90 transition-opacity"
                                     />
-                                    <p className="font-serif text-3xl text-[var(--theme-text-body)]/90 italic z-10 drop-shadow-sm">
-                                        "Dear Nair..."
-                                    </p>
+
                                 </motion.div>
                             </AnimatePresence>
                         </div>

@@ -2,7 +2,7 @@
 import { useState, useCallback, RefObject } from 'react';
 import { StickerData } from './useAutoSave';
 
-export function useStickers(paperRef: RefObject<HTMLDivElement>) {
+export function useStickers(paperRef: RefObject<HTMLDivElement | null>) {
     const [stickers, setStickers] = useState<StickerData[]>([]);
     const [activeStickerId, setActiveStickerId] = useState<string | null>(null);
 
