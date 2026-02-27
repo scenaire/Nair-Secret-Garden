@@ -10,7 +10,6 @@ const NAV_ITEMS = [
     { label: "Art Pavilion", href: "/gallery", emoji: "" },
     { label: "Picnic Canvas", href: "/canvas", emoji: "" },
     { label: "Wishing Well", href: "/wishing-well", emoji: "" },
-    { label: "Announcements", href: "/overlay", emoji: "" },
 ];
 
 interface NavbarProps {

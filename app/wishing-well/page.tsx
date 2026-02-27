@@ -87,7 +87,7 @@ export default function WishingWellPage() {
                                 <WellSVGContents />
                             </svg>
                             <p style={{ fontSize: 10, letterSpacing: "0.3em", textTransform: "uppercase", color: "#4A6B45", opacity: 0.5 }}>
-                                Birthday Wishlist · 2025
+                                Birthday Wishlist · 2026
                             </p>
                             <h1 style={{ fontFamily: "var(--font-cormorant), serif", fontSize: 34, fontWeight: 300, fontStyle: "italic", color: "#6B4C35", lineHeight: 1.2 }}>
                                 The Wishing Well
