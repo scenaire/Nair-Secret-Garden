@@ -30,7 +30,12 @@ export default function WishingWellPage() {
     useEffect(() => {
         Promise.all([fetchWishItems(), fetchLeaderboard()])
             .then(([wi, lb]) => { setItems(wi); setLeaderboard(lb); })
-            .catch(console.error)
+            .catch(e => {
+                console.error("fetch error:", JSON.stringify(e, null, 2));
+                console.error("message:", e?.message);
+                console.error("code:", e?.code);
+                console.error("details:", e?.details);
+            })
             .finally(() => setIsLoading(false));
     }, []);
 

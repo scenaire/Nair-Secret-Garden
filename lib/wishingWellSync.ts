@@ -46,41 +46,74 @@ export interface LeaderboardEntry {
     gift_count: number;
 }
 
+// ── Image compression (Canvas API) ──────────────────────────
+// slip: max 1200px, WebP 0.82 — ลดขนาดก่อนอัปโหลด
+async function compressImage(
+    file: File,
+    maxDim = 1200,
+    quality = 0.82,
+): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+            const w = Math.round(img.width * scale);
+            const h = Math.round(img.height * scale);
+            const canvas = document.createElement("canvas");
+            canvas.width = w; canvas.height = h;
+            canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+            canvas.toBlob(
+                (blob) => blob ? resolve(blob) : reject(new Error("Compression failed")),
+                "image/webp", quality,
+            );
+        };
+        img.onerror = reject;
+        img.src = url;
+    });
+}
+
 // ── Upload slip to storage ────────────────────────────────────
 async function uploadSlip(file: File, userId: string): Promise<string> {
     const supabase = createClient();
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+    // compress: max 1200px, WebP 0.82
+    const compressed = await compressImage(file, 1200, 0.82);
+    const path = `${userId}/${crypto.randomUUID()}.webp`;
     const { error } = await supabase.storage
         .from(SLIP_BUCKET)
-        .upload(path, file, { cacheControl: "3600", upsert: false });
+        .upload(path, compressed, { contentType: "image/webp", cacheControl: "3600", upsert: false });
     if (error) throw error;
-    // return path (not public URL — admin fetches via signed URL)
     return path;
 }
 
 // ── Fetch all wish items with totals ─────────────────────────
 export async function fetchWishItems(): Promise<WishItem[]> {
     const supabase = createClient();
-    // join items with totals view
-    const { data, error } = await supabase
-        .from("wish_items")
-        .select(`
-            *,
-            wish_item_totals (
-                approved_total,
-                pending_total,
-                supporter_count
-            )
-        `)
-        .order("sort_order", { ascending: true });
-    if (error) throw error;
 
-    return (data ?? []).map((row: any) => ({
+    const [itemsRes, totalsRes] = await Promise.all([
+        supabase
+            .from("wish_items")
+            .select("*")
+            .order("sort_order", { ascending: true }),
+        supabase.rpc("get_wish_item_totals"),
+    ]);
+
+    if (itemsRes.error) throw itemsRes.error;
+    if (totalsRes.error) throw totalsRes.error;
+
+    const totalsMap = new Map<string, { approved_total: number; pending_total: number; supporter_count: number }>();
+    for (const t of (totalsRes.data ?? []) as any[]) {
+        totalsMap.set(t.wish_item_id, {
+            approved_total: Number(t.approved_total) || 0,
+            pending_total: Number(t.pending_total) || 0,
+            supporter_count: Number(t.supporter_count) || 0,
+        });
+    }
+
+    return (itemsRes.data ?? []).map((row: any) => ({
         ...row,
-        approved_total: row.wish_item_totals?.approved_total ?? 0,
-        pending_total: row.wish_item_totals?.pending_total ?? 0,
-        supporter_count: row.wish_item_totals?.supporter_count ?? 0,
+        ...(totalsMap.get(row.id) ?? { approved_total: 0, pending_total: 0, supporter_count: 0 }),
     }));
 }
 
@@ -174,11 +207,13 @@ export async function submitSurprise({
 // ── Fetch leaderboard ─────────────────────────────────────────
 export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
     const supabase = createClient();
-    const { data, error } = await supabase
-        .from("wish_leaderboard")
-        .select("*");
+    const { data, error } = await supabase.rpc("get_wish_leaderboard");
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map((r: any) => ({
+        ...r,
+        total_amount: Number(r.total_amount) || 0,
+        gift_count: Number(r.gift_count) || 0,
+    }));
 }
 
 // ── Format currency (Thai Baht) ───────────────────────────────

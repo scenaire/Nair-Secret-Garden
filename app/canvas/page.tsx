@@ -6,6 +6,7 @@ import React, {
     useRef,
     useEffect,
     useCallback,
+    useMemo,
     type RefObject,
 } from "react";
 import { motion } from "framer-motion";
@@ -26,6 +27,7 @@ import {
     loadSnapshot,
     downloadCanvas,
     type StrokeMessage,
+    type PresenceUser,
 } from "@/lib/canvasSync";
 import {
     type Pixel,
@@ -48,10 +50,16 @@ export default function CanvasPage() {
     const [color, setColor] = useState<PixelColor>("#4b3a2e");
     const [brushSize, setBrushSize] = useState<number>(1);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-    const [isLoading, setIsLoading] = useState(true);
-    const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
-    const [recentColors, setRecentColors] = useState<PixelColor[]>([]);
 
+    // undefined = กำลังหา URL อยู่, null = ไม่มี snapshot, string = มี URL พร้อมใช้
+    // isLoading จะเป็น true ตราบใดที่ snapshotUrl ยังเป็น undefined
+    // หรือ PixelCanvas ยังโหลดรูปไม่เสร็จ
+    const [snapshotUrl, setSnapshotUrl] = useState<string | null | undefined>(undefined);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
+    const [drawingMap, setDrawingMap] = useState<Record<string, number>>({});
+    const [recentColors, setRecentColors] = useState<PixelColor[]>([]);
 
     const canvasRef = useRef<PixelCanvasRef | null>(null);
     const channelRef = useRef<ReturnType<typeof subscribeToCanvas> | null>(null);
@@ -63,52 +71,30 @@ export default function CanvasPage() {
         rawUser?.user_metadata?.name ??
         rawUser?.user_metadata?.preferred_username ??
         "Guest";
+    const userAvatar = uiUser?.avatar ?? "";
 
     // ───────────────────────────────────────────────────────────────
-    // Load snapshot on mount (robust version)
+    // Fetch snapshot URL on mount — แค่ดึง URL, ไม่ต้องยุ่งกับ canvasRef
+    // การโหลดรูปจริงเกิดใน PixelCanvas ผ่าน initialSnapshotUrl prop
     // ───────────────────────────────────────────────────────────────
     useEffect(() => {
         let cancelled = false;
 
-        async function initSnapshot() {
+        async function fetchSnapshotUrl() {
             try {
-                // เผื่อมีกรณีที่ isLoading ไม่ได้ถูก set เป็น true มาก่อน
-                setIsLoading(true);
-
                 const url = await loadSnapshot();
-
-                if (cancelled) return;
-
-                // ยังไม่เคยมี snapshot -> ถือว่าโหลดเสร็จแต่มันคือกระดาษเปล่า
-                if (!url) {
-                    return; // ไปจบที่ finally -> isLoading = false
-                }
-
-                const applyToCanvas = () => {
-                    if (cancelled) return;
-                    const inst = canvasRef.current;
-                    if (!inst) return;
-                    // ใช้ method ใน PixelCanvas ให้จัดการวาด snapshot เอง
-                    inst.loadSnapshotFromUrl(url);
-                };
-
-                // ถ้ายังไม่มี instance ให้รอให้ PixelCanvas mount ก่อนค่อย apply
-                if (!canvasRef.current) {
-                    requestAnimationFrame(applyToCanvas);
-                } else {
-                    applyToCanvas();
+                if (!cancelled) {
+                    setSnapshotUrl(url); // null หรือ string
                 }
             } catch (err) {
-                // กันทุกกรณี error ไม่ให้ค้าง loading
-                console.error("[snapshot] init failed", err);
-            } finally {
+                console.error("[snapshot] fetchSnapshotUrl failed", err);
                 if (!cancelled) {
-                    setIsLoading(false);
+                    setSnapshotUrl(null); // พัง → treat เหมือนไม่มี snapshot
                 }
             }
         }
 
-        void initSnapshot();
+        void fetchSnapshotUrl();
 
         return () => {
             cancelled = true;
@@ -122,9 +108,7 @@ export default function CanvasPage() {
         if (!isLoggedIn || !userId) return;
 
         const channel = subscribeToCanvas(
-            // on remote stroke
             (msg: StrokeMessage) => {
-                // ข้ามของตัวเอง (เผื่อ config self:false พลาด)
                 if (msg.userId === userId) return;
 
                 const off = canvasRef.current?.getCanvas();
@@ -142,17 +126,20 @@ export default function CanvasPage() {
                     }
                 });
 
-                // sync internal pixel state ถ้า PixelCanvas ใช้งาน
                 canvasRef.current?.applyRemotePixels(msg.pixels);
+
+                setDrawingMap((prev) => ({
+                    ...prev,
+                    [msg.userName]: Date.now(),
+                }));
             },
-            // on presence change
-            (users) => {
+            (users: PresenceUser[]) => {
                 setOnlineUsers(users);
             }
         );
 
         channelRef.current = channel;
-        void trackPresence(channel, userName);
+        void trackPresence(channel, userId, userName, userAvatar);
 
         return () => {
             channel.unsubscribe();
@@ -160,12 +147,37 @@ export default function CanvasPage() {
         };
     }, [isLoggedIn, userId, userName]);
 
+    // is drawing -- 2 sec timeout
+    useEffect(() => {
+        const id = window.setInterval(() => {
+            const now = Date.now();
+            setDrawingMap((prev) => {
+                const next: Record<string, number> = {};
+                for (const [name, ts] of Object.entries(prev)) {
+                    if (now - ts < 2000) {
+                        next[name] = ts;
+                    }
+                }
+                return next;
+            });
+        }, 1000);
+
+        return () => window.clearInterval(id);
+    }, []);
+
+    const drawingUsers = useMemo(
+        () =>
+            onlineUsers
+                .filter((u) => drawingMap[u.name] != null)
+                .map((u) => u.name),
+        [onlineUsers, drawingMap]
+    );
+
     // ───────────────────────────────────────────────────────────────
     // Handle local stroke → broadcast + debounce save
     // ───────────────────────────────────────────────────────────────
     const handleStroke = useCallback(
         async (pixels: Pixel[]) => {
-            // ✨ track recent colors ก่อนเช็ค channel
             const strokeColor = pixels[0]?.color;
             if (strokeColor && !strokeColor.startsWith('FILL:') && strokeColor !== '#FFFFFF') {
                 setRecentColors(prev => {
@@ -179,7 +191,6 @@ export default function CanvasPage() {
                 return;
             }
 
-            // มีการแก้ไขใหม่ → แสดงว่า "กำลังจะมีการเซฟในอีกสักพัก"
             setSaveStatus((prev) => (prev === "saving" ? prev : "pending"));
 
             await broadcastStroke(channelRef.current, {
@@ -188,7 +199,11 @@ export default function CanvasPage() {
                 pixels,
             });
 
-            // debounce การเซฟ snapshot 5 วินาที
+            setDrawingMap((prev) => ({
+                ...prev,
+                [userName]: Date.now(),
+            }));
+
             if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 
             saveTimerRef.current = setTimeout(async () => {
@@ -199,13 +214,11 @@ export default function CanvasPage() {
                 try {
                     await saveSnapshot(off);
                     setSaveStatus("saved");
-                    // แสดง saved ซักพัก แล้วกลับไป idle
                     setTimeout(() => {
                         setSaveStatus("idle");
                     }, 2000);
                 } catch (err) {
                     console.error("[snapshot] save failed", err);
-                    // ไม่เพิ่มสถานะ error แยก เพราะเธอบอกแค่ stage ล่าสุดก็พอ
                     setSaveStatus("idle");
                 }
             }, SAVE_DEBOUNCE_MS);
@@ -227,7 +240,6 @@ export default function CanvasPage() {
             className="h-screen flex flex-col overflow-hidden"
             style={{ backgroundColor: "#FDFBF4", fontFamily: "'Noto Sans', sans-serif" }}
         >
-            {/* Ambient petals (เบา ๆ) */}
             {[0, 1, 2, 3, 4].map((i) => (
                 <motion.div
                     key={i}
@@ -257,7 +269,6 @@ export default function CanvasPage() {
                 </motion.div>
             ))}
 
-            {/* Navbar ด้านบน */}
             <Navbar
                 isLoggedIn={isLoggedIn}
                 user={uiUser}
@@ -265,9 +276,7 @@ export default function CanvasPage() {
                 onLogout={logout}
             />
 
-            {/* Main area ด้านล่าง navbar */}
             <div className="flex flex-1 overflow-hidden pt-14">
-                {/* Gate: ต้อง login ก่อน */}
                 {!isLoggedIn ? (
                     <div className="flex-1 flex items-center justify-center">
                         <motion.div
@@ -320,7 +329,6 @@ export default function CanvasPage() {
                     </div>
                 ) : (
                     <div className="flex flex-1 overflow-hidden gap-0">
-                        {/* Toolbar ด้านซ้าย */}
                         <div
                             className="w-[260px] min-w-[260px] flex-shrink-0 py-3 px-3"
                             style={{
@@ -340,14 +348,13 @@ export default function CanvasPage() {
                                 onBrushChange={setBrushSize}
                                 onDownload={handleDownload}
                                 onlineUsers={onlineUsers}
+                                drawingUsers={drawingUsers}
                                 canDownload={true}
                                 recentColors={recentColors}
                             />
                         </div>
 
-                        {/* พื้นที่ Canvas */}
                         <div className="flex-1 relative overflow-hidden">
-                            {/* Title bar เหนือ canvas */}
                             <div
                                 className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 px-4 py-1.5 rounded-full"
                                 style={{
@@ -372,34 +379,23 @@ export default function CanvasPage() {
                                     {CANVAS_WIDTH}×{CANVAS_HEIGHT}
                                 </span>
 
-                                {/* save status เล็ก ๆ แต่มองเห็นได้ */}
                                 {saveStatus === "pending" && (
-                                    <span
-                                        className="text-[10px]"
-                                        style={{ color: "#8B5E52" }}
-                                    >
+                                    <span className="text-[10px]" style={{ color: "#8B5E52" }}>
                                         changes pending…
                                     </span>
                                 )}
                                 {saveStatus === "saving" && (
-                                    <span
-                                        className="text-[10px]"
-                                        style={{ color: "#8B5E52" }}
-                                    >
+                                    <span className="text-[10px]" style={{ color: "#8B5E52" }}>
                                         saving…
                                     </span>
                                 )}
                                 {saveStatus === "saved" && (
-                                    <span
-                                        className="text-[10px]"
-                                        style={{ color: "#66BB6A" }}
-                                    >
+                                    <span className="text-[10px]" style={{ color: "#66BB6A" }}>
                                         ✓ saved
                                     </span>
                                 )}
                             </div>
 
-                            {/* Hint ด้านล่าง */}
                             <div
                                 className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 text-[10px] px-3 py-1 rounded-full pointer-events-none"
                                 style={{
@@ -412,7 +408,6 @@ export default function CanvasPage() {
                                 Scroll to zoom · Alt+drag to pan
                             </div>
 
-                            {/* Loading overlay ระหว่างโหลด snapshot */}
                             {isLoading && (
                                 <div
                                     className="absolute inset-0 z-20 flex items-center justify-center"
@@ -433,16 +428,27 @@ export default function CanvasPage() {
                                 </div>
                             )}
 
-                            {/* ตัว PixelCanvas จริง */}
-                            <PixelCanvas
-                                ref={canvasRef as RefObject<PixelCanvasRef>}
-                                tool={tool}
-                                color={color}
-                                brushSize={brushSize}
-                                onColorPick={setColor}
-                                onStroke={handleStroke}
-                                userId={userId}
-                            />
+                            {/*
+                             * ✅ KEY CHANGE:
+                             * - snapshotUrl เป็น undefined ตอนยังไม่รู้ว่ามี snapshot ไหม
+                             *   → ยังไม่ render PixelCanvas เลย (กันไม่ให้ mount ด้วย URL ว่าง)
+                             * - พอ snapshotUrl เป็น null หรือ string → render พร้อมส่ง URL ไปให้
+                             * - PixelCanvas จะโหลดรูปเองใน useEffect แล้วเรียก onSnapshotLoaded
+                             *   ซึ่งจะ setIsLoading(false)
+                             */}
+                            {snapshotUrl !== undefined && (
+                                <PixelCanvas
+                                    ref={canvasRef as RefObject<PixelCanvasRef>}
+                                    tool={tool}
+                                    color={color}
+                                    brushSize={brushSize}
+                                    onColorPick={setColor}
+                                    onStroke={handleStroke}
+                                    userId={userId}
+                                    initialSnapshotUrl={snapshotUrl}
+                                    onSnapshotLoaded={() => setIsLoading(false)}
+                                />
+                            )}
                         </div>
                     </div>
                 )}

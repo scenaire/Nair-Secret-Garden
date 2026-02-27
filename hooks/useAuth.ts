@@ -47,14 +47,25 @@ export function useAuth() {
     };
 
     // แปลง Supabase User → format ที่ Navbar และ component อื่นๆ ใช้
-    const userForUI = user ? {
-        name: user.user_metadata?.name
-            ?? user.user_metadata?.preferred_username
-            ?? "Guest",
-        avatar: user.user_metadata?.avatar_url
-            ?? user.user_metadata?.picture
-            ?? "",
-    } : null;
+    const metadata = user?.user_metadata ?? {};
+
+    const userForUI = user
+        ? {
+            name:
+                metadata.name ??
+                metadata.preferred_username ??
+                metadata.login ??              // บาง provider ใช้ login
+                metadata.nickname ??
+                user.email?.split("@")[0] ??
+                "Guest",
+            avatar:
+                metadata.avatar_url ??         // GitHub / บาง provider
+                metadata.picture ??            // OIDC / Twitch บางเคส
+                metadata.profile_image_url ??  // Twitch ส่วนใหญ่
+                metadata.image_url ??          // กันเหนียว provider แปลก ๆ
+                "",
+        }
+        : null;
 
     return { isLoggedIn, user: userForUI, rawUser: user, isLoading, loginWithTwitch, logout };
 }

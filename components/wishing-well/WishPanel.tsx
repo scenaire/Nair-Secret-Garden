@@ -342,40 +342,37 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
                                         {/* submit buttons */}
                                         {item.mode === "crowdfund" ? (
                                             <div className="flex flex-col gap-1.5">
-                                                {/* drop a coin — partial amount */}
-                                                <motion.button
-                                                    onClick={handleSubmit}
-                                                    disabled={status === "submitting" || !slipFile || effectiveAmount <= 0}
-                                                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                                                    className="flex items-center justify-center gap-1.5 w-full"
-                                                    style={{
-                                                        padding: "9px 16px", borderRadius: 8, cursor: "pointer",
-                                                        border: "1.5px solid rgba(143,175,138,0.4)",
-                                                        background: "transparent", color: "#4A6B45", fontSize: 13,
-                                                        opacity: (!slipFile || effectiveAmount <= 0) ? 0.45 : 1,
-                                                    }}
-                                                >
-                                                    {status === "submitting"
-                                                        ? <><Loader2 size={12} className="animate-spin" /> กำลังส่ง…</>
-                                                        : <><Coins size={13} /> หย่อนเหรียญ {effectiveAmount > 0 ? formatBaht(effectiveAmount) : ""}</>
-                                                    }
-                                                </motion.button>
-                                                {/* make it real — full remaining */}
-                                                <motion.button
-                                                    onClick={() => { setCustomAmount(String(remaining)); handleSubmit(); }}
-                                                    disabled={status === "submitting" || !slipFile}
-                                                    whileHover={{ scale: 1.02, boxShadow: "0 4px 14px rgba(74,107,69,0.28)" }}
-                                                    whileTap={{ scale: 0.97 }}
-                                                    className="flex items-center justify-center gap-1.5 w-full"
-                                                    style={{
-                                                        padding: "9px 16px", borderRadius: 8, border: "none",
-                                                        background: "linear-gradient(135deg, #4A6B45, #8FAF8A)",
-                                                        color: "white", fontSize: 13, cursor: "pointer", fontWeight: 500,
-                                                        opacity: !slipFile ? 0.45 : 1,
-                                                    }}
-                                                >
-                                                    <Star size={13} /> ให้ครบเลย! — {formatBaht(remaining)}
-                                                </motion.button>
+                                                {/* single dynamic button */}
+                                                {(() => {
+                                                    const isFull = effectiveAmount >= remaining;
+                                                    return (
+                                                        <motion.button
+                                                            onClick={handleSubmit}
+                                                            disabled={status === "submitting" || !slipFile || effectiveAmount <= 0}
+                                                            whileHover={{ scale: 1.02, boxShadow: isFull ? "0 4px 14px rgba(74,107,69,0.28)" : undefined }}
+                                                            whileTap={{ scale: 0.97 }}
+                                                            className="flex items-center justify-center gap-1.5 w-full"
+                                                            style={{
+                                                                padding: "9px 16px", borderRadius: 8, cursor: "pointer",
+                                                                border: isFull ? "none" : "1.5px solid rgba(143,175,138,0.4)",
+                                                                background: isFull
+                                                                    ? "linear-gradient(135deg, #4A6B45, #8FAF8A)"
+                                                                    : "transparent",
+                                                                color: isFull ? "white" : "#4A6B45",
+                                                                fontSize: 13, fontWeight: isFull ? 500 : 400,
+                                                                opacity: (!slipFile || effectiveAmount <= 0) ? 0.45 : 1,
+                                                                transition: "all 0.2s",
+                                                            }}
+                                                        >
+                                                            {status === "submitting"
+                                                                ? <><Loader2 size={12} className="animate-spin" /> กำลังส่ง…</>
+                                                                : isFull
+                                                                    ? <><Star size={13} /> ให้ครบเลย! — {formatBaht(effectiveAmount)}</>
+                                                                    : <><Coins size={13} /> หย่อนเหรียญ {effectiveAmount > 0 ? formatBaht(effectiveAmount) : ""}</>
+                                                            }
+                                                        </motion.button>
+                                                    );
+                                                })()}
                                             </div>
                                         ) : (
                                             /* buy now — single button */

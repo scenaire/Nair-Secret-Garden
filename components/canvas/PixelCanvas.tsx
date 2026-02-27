@@ -16,7 +16,9 @@ interface PixelCanvasProps {
     brushSize: number;
     onColorPick: (color: PixelColor) => void;
     onStroke: (pixels: Pixel[]) => void;
+    onSnapshotLoaded?: () => void; // เรียกเมื่อโหลด snapshot เสร็จ (หรือไม่มี snapshot)
     userId: string;
+    initialSnapshotUrl?: string | null; // URL ของ snapshot ที่จะโหลดตอน mount
 }
 
 // expose ref สำหรับ parent ใช้ (saveSnapshot, download)
@@ -30,7 +32,7 @@ const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 16;
 
 export const PixelCanvas = React.forwardRef<PixelCanvasRef, PixelCanvasProps>(
-    ({ tool, color, brushSize, onColorPick, onStroke, userId }, ref) => {
+    ({ tool, color, brushSize, onColorPick, onStroke, onSnapshotLoaded, userId, initialSnapshotUrl }, ref) => {
 
         const offscreenRef = useRef<HTMLCanvasElement | null>(null); // full-res 960×540
         const displayRef = useRef<HTMLCanvasElement | null>(null); // on-screen scaled
@@ -45,20 +47,42 @@ export const PixelCanvas = React.forwardRef<PixelCanvasRef, PixelCanvasProps>(
         const panStart = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
         const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-        // ── init offscreen canvas ──────────────────────────────────────────────
+        // ── init offscreen canvas + load snapshot ─────────────────────────────
         useEffect(() => {
-            // ถ้ามีคนเรียก loadSnapshotFromUrl ก่อนหน้านี้แล้ว
-            // ไม่ต้องสร้าง/ทับ offscreen ซ้ำ
-            if (offscreenRef.current) return;
-
             const off = document.createElement("canvas");
             off.width = CANVAS_WIDTH;
             off.height = CANVAS_HEIGHT;
             const ctx = off.getContext("2d")!;
+
+            // fill white ก่อนเสมอ
             ctx.fillStyle = "#FFFFFF";
             ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
             offscreenRef.current = off;
-        }, []);
+
+            if (!initialSnapshotUrl) {
+                // ไม่มี snapshot โหลดเสร็จทันที
+                onSnapshotLoaded?.();
+                return;
+            }
+
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+
+            img.onload = () => {
+                ctx.clearRect(0, 0, off.width, off.height);
+                ctx.drawImage(img, 0, 0, off.width, off.height);
+                renderDisplay();
+                onSnapshotLoaded?.();
+            };
+
+            img.onerror = () => {
+                console.error("[PixelCanvas] failed to load snapshot", initialSnapshotUrl);
+                onSnapshotLoaded?.(); // แจ้ง parent ไม่ให้ค้าง loading
+            };
+
+            img.src = initialSnapshotUrl;
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, []); // [] ตั้งใจ โหลดครั้งเดียวตอน mount เท่านั้น
 
         // ── expose ref ─────────────────────────────────────────────────────────
         React.useImperativeHandle(ref, () => ({
@@ -72,37 +96,20 @@ export const PixelCanvas = React.forwardRef<PixelCanvasRef, PixelCanvasProps>(
                 renderDisplay();
             },
 
-            // ✨ โหลด snapshot จาก URL แล้ววาดลง offscreen
+            // เก็บไว้เผื่อต้องการ reset/reload snapshot ในอนาคต
             loadSnapshotFromUrl: (url: string) => {
-                // ถ้ายังไม่มี offscreen ให้สร้างเลย
-                let off = offscreenRef.current;
-                if (!off) {
-                    off = document.createElement("canvas");
-                    off.width = CANVAS_WIDTH;
-                    off.height = CANVAS_HEIGHT;
-                    offscreenRef.current = off;
-                }
-
+                const off = offscreenRef.current;
+                if (!off) return;
                 const img = new Image();
                 img.crossOrigin = "anonymous";
-
                 img.onload = () => {
-                    const ctx = off!.getContext("2d");
+                    const ctx = off.getContext("2d");
                     if (!ctx) return;
-
-                    // เคลียร์ก่อน เผื่อมีอะไรค้างอยู่
-                    ctx.clearRect(0, 0, off!.width, off!.height);
-                    // วาดเต็มพื้นที่ canvas
-                    ctx.drawImage(img, 0, 0, off!.width, off!.height);
-
-                    // ให้จอแสดงผลตาม offscreen
+                    ctx.clearRect(0, 0, off.width, off.height);
+                    ctx.drawImage(img, 0, 0, off.width, off.height);
                     renderDisplay();
                 };
-
-                img.onerror = () => {
-                    console.error("[PixelCanvas] failed to load snapshot image", url);
-                };
-
+                img.onerror = () => console.error("[PixelCanvas] failed to reload snapshot", url);
                 img.src = url;
             },
         }));

@@ -1,9 +1,9 @@
-// middleware.ts (วางที่ root ของโปรเจกต์ ข้างๆ app/)
-
+// middleware.ts
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+    const { pathname } = request.nextUrl;
     let supabaseResponse = NextResponse.next({ request });
 
     const supabase = createServerClient(
@@ -28,7 +28,30 @@ export async function middleware(request: NextRequest) {
     );
 
     // refresh session — สำคัญมาก อย่าลบออกนะคะ
-    await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // ── Admin guard ───────────────────────────────────────────
+    if (pathname.startsWith("/admin")) {
+        // ยังไม่ login
+        if (!user) {
+            const url = new URL("/", request.url);
+            url.searchParams.set("reason", "login_required");
+            return NextResponse.redirect(url);
+        }
+
+        // login แล้ว ตรวจว่าเป็น admin ไหม
+        const { data: adminRow } = await supabase
+            .from("admin_users")
+            .select("user_id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+        if (!adminRow) {
+            const url = new URL("/", request.url);
+            url.searchParams.set("reason", "unauthorized");
+            return NextResponse.redirect(url);
+        }
+    }
 
     return supabaseResponse;
 }

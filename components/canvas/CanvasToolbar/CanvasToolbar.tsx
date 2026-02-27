@@ -15,12 +15,12 @@ export interface CanvasToolbarProps {
     color: PixelColor;
     brushSize: number;
     onToolChange: (tool: Tool) => void;
-    onBrushChange: (size: number) => void;
     onColorChange: (color: PixelColor) => void;
+    onBrushChange: (size: number) => void;
     onDownload: () => void;
 
-    onlineUsers: string[];
-    drawingUsers?: string[];
+    onlineUsers: { name: string; avatar?: string }[];
+    drawingUsers?: string[]; // ชื่อของคนที่กำลังวาด
 
     canDownload: boolean;
     recentColors?: PixelColor[];
@@ -132,8 +132,17 @@ const ColorSwatch = memo(function ColorSwatch({
 // Main CanvasToolbar
 // ────────────────────────────────────────────────────────────
 export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
-    tool, color, brushSize, onToolChange, onBrushChange, onColorChange,
-    onDownload, onlineUsers, drawingUsers = [], canDownload, recentColors = [],
+    tool,
+    color,
+    brushSize,
+    onToolChange,
+    onBrushChange,
+    onColorChange,
+    onDownload,
+    onlineUsers,
+    drawingUsers = [],    // ✨ default []
+    canDownload,
+    recentColors = [],
 }) => {
     const colorInputRef = useRef<HTMLInputElement>(null);
 
@@ -294,7 +303,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
 
             {/* ── ONLINE USERS ── */}
             {onlineUsers.length > 0 && (
-                <div className="flex flex-col gap-1.5">
+                <section className="flex flex-col gap-1">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                             <span
@@ -302,8 +311,8 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                                 style={{ backgroundColor: "#7CB972" }}
                             />
                             <span
-                                className="text-[10px] font-medium"
-                                style={{ color: "rgba(139,94,82,0.7)" }}
+                                className="text-[10px] font-semibold"
+                                style={{ color: "rgba(139,94,82,0.75)" }}
                             >
                                 Guests in the garden
                             </span>
@@ -316,46 +325,60 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                         </span>
                     </div>
 
-                    <div className="max-h-24 overflow-y-auto pr-0.5 mt-0.5 space-y-0.5">
-                        {onlineUsers.map((name) => {
-                            const isDrawing = drawingUsers.includes(name);
+                    <div className="mt-1 flex flex-wrap gap-3">
+                        {onlineUsers.map((user, index) => {
+                            const isDrawing = drawingUsers.includes(user.name);
+                            const initial = user.name.trim().charAt(0).toUpperCase() || "?";
+                            const key = `${user.name}-${index}`;
+
                             return (
                                 <div
-                                    key={name}
-                                    className="flex items-center justify-between gap-1"
+                                    key={key}
+                                    className="flex flex-col items-center gap-0.5 min-w-[40px]"
                                 >
-                                    <div className="flex items-center gap-1.5 min-w-0">
-                                        <span
-                                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDrawing ? "animate-pulse" : ""
-                                                }`}
-                                            style={{
-                                                backgroundColor: isDrawing
-                                                    ? "#E87A9A" // กำลังวาด → ชมพู
-                                                    : "#7CB972", // ออนไลน์เฉย ๆ → เขียว
-                                            }}
-                                        />
-                                        <span
-                                            className="text-[10px] truncate"
-                                            style={{ color: "rgba(74,59,50,0.8)" }}
-                                            title={name}
-                                        >
-                                            {name}
-                                        </span>
+                                    <div
+                                        className="w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-sm bg-white overflow-hidden"
+                                        style={{
+                                            borderColor: isDrawing ? "#E87A9A" : "#7CB972",
+                                            boxShadow: isDrawing
+                                                ? "0 0 0 2px rgba(232,122,154,0.35)"
+                                                : "0 0 0 1px rgba(124,185,114,0.25)",
+                                        }}
+                                    >
+                                        {user.avatar ? (
+                                            <img
+                                                src={user.avatar}
+                                                alt={user.name}
+                                                className="w-full h-full object-cover rounded-full"
+                                            />
+                                        ) : (
+                                            <span
+                                                className="text-[11px] font-semibold"
+                                                style={{ color: "rgba(74,59,50,0.9)" }}
+                                            >
+                                                {initial}
+                                            </span>
+                                        )}
                                     </div>
-
+                                    <span
+                                        className="text-[9px] max-w-[60px] truncate text-center"
+                                        style={{ color: "rgba(139,94,82,0.8)" }}
+                                        title={user.name}
+                                    >
+                                        {user.name}
+                                    </span>
                                     {isDrawing && (
                                         <span
-                                            className="text-[9px] flex-shrink-0"
-                                            style={{ color: "rgba(139,94,82,0.75)" }}
+                                            className="text-[9px] text-[rgba(232,122,154,0.95)] animate-pulse"
                                         >
-                                            กำลังวาดอยู่…
+                                            drawing…
                                         </span>
                                     )}
                                 </div>
                             );
                         })}
                     </div>
-                </div>
+                </section>
             )}
 
             {/* ── DOWNLOAD ── */}
