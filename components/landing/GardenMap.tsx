@@ -40,7 +40,7 @@ const FEATURES: readonly GardenFeature[] = [
         badge: "3 drawing now",
     },
     {
-        href: "/wishlist",
+        href: "/wishing-well",
         emoji: "⛲",
         title: "Wishing Well",
         subtitle: "Nair's wishlist",

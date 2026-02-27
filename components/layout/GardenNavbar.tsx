@@ -9,7 +9,7 @@ const NAV_ITEMS = [
     { label: "Guestbook", href: "/guestbook", emoji: "" },
     { label: "Art Pavilion", href: "/gallery", emoji: "" },
     { label: "Picnic Canvas", href: "/canvas", emoji: "" },
-    { label: "Wishing Well", href: "/wishlist", emoji: "" },
+    { label: "Wishing Well", href: "/wishing-well", emoji: "" },
     { label: "Announcements", href: "/overlay", emoji: "" },
 ];
 

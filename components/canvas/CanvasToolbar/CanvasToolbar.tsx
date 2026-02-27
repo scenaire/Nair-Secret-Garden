@@ -15,10 +15,13 @@ export interface CanvasToolbarProps {
     color: PixelColor;
     brushSize: number;
     onToolChange: (tool: Tool) => void;
-    onColorChange: (color: PixelColor) => void;
     onBrushChange: (size: number) => void;
+    onColorChange: (color: PixelColor) => void;
     onDownload: () => void;
+
     onlineUsers: string[];
+    drawingUsers?: string[];
+
     canDownload: boolean;
     recentColors?: PixelColor[];
 }
@@ -130,7 +133,7 @@ const ColorSwatch = memo(function ColorSwatch({
 // ────────────────────────────────────────────────────────────
 export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
     tool, color, brushSize, onToolChange, onBrushChange, onColorChange,
-    onDownload, onlineUsers, canDownload, recentColors = [],
+    onDownload, onlineUsers, drawingUsers = [], canDownload, recentColors = [],
 }) => {
     const colorInputRef = useRef<HTMLInputElement>(null);
 
@@ -291,12 +294,67 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
 
             {/* ── ONLINE USERS ── */}
             {onlineUsers.length > 0 && (
-                <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: "#7CB972" }} />
-                    <span className="text-[10px]" style={{ color: "rgba(139,94,82,0.6)" }}>
-                        {onlineUsers.length} {onlineUsers.length === 1 ? "guest" : "guests"} in the garden
-                    </span>
+                <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                            <span
+                                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: "#7CB972" }}
+                            />
+                            <span
+                                className="text-[10px] font-medium"
+                                style={{ color: "rgba(139,94,82,0.7)" }}
+                            >
+                                Guests in the garden
+                            </span>
+                        </div>
+                        <span
+                            className="text-[10px]"
+                            style={{ color: "rgba(139,94,82,0.6)" }}
+                        >
+                            {onlineUsers.length}
+                        </span>
+                    </div>
+
+                    <div className="max-h-24 overflow-y-auto pr-0.5 mt-0.5 space-y-0.5">
+                        {onlineUsers.map((name) => {
+                            const isDrawing = drawingUsers.includes(name);
+                            return (
+                                <div
+                                    key={name}
+                                    className="flex items-center justify-between gap-1"
+                                >
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <span
+                                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDrawing ? "animate-pulse" : ""
+                                                }`}
+                                            style={{
+                                                backgroundColor: isDrawing
+                                                    ? "#E87A9A" // กำลังวาด → ชมพู
+                                                    : "#7CB972", // ออนไลน์เฉย ๆ → เขียว
+                                            }}
+                                        />
+                                        <span
+                                            className="text-[10px] truncate"
+                                            style={{ color: "rgba(74,59,50,0.8)" }}
+                                            title={name}
+                                        >
+                                            {name}
+                                        </span>
+                                    </div>
+
+                                    {isDrawing && (
+                                        <span
+                                            className="text-[9px] flex-shrink-0"
+                                            style={{ color: "rgba(139,94,82,0.75)" }}
+                                        >
+                                            กำลังวาดอยู่…
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 

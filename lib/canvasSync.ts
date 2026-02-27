@@ -72,10 +72,15 @@ export async function trackPresence(
     channel: RealtimeChannel,
     userName: string
 ): Promise<void> {
-    const result = await channel.track({ userName });
+    try {
+        const result = await channel.track({ userName });
 
-    if (result !== "ok") {
-        console.error("[realtime] presence track error:", result);
+        // ถ้าอยากเช็ค error เผื่อ lib คืน { error } มา:
+        if ((result as any)?.error) {
+            console.error("[realtime] presence track error:", (result as any).error);
+        }
+    } catch (err) {
+        console.error("[realtime] presence track error:", err);
     }
 }
 
