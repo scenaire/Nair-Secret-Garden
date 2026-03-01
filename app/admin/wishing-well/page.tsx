@@ -398,6 +398,37 @@ function ItemsTab({ items, onRefresh }: { items: WishItemAdmin[]; onRefresh: () 
     const [editing, setEditing] = useState<WishItemAdmin | null>(null);
     const [isNew, setIsNew] = useState(false);
     const [working, setWorking] = useState<string | null>(null);
+    const [ordered, setOrdered] = useState<WishItemAdmin[]>(items);
+    const [saving, setSaving] = useState(false);
+    const dragId = useRef<string | null>(null);
+    const dragOver = useRef<string | null>(null);
+
+    // sync เมื่อ items จาก parent เปลี่ยน
+    useEffect(() => { setOrdered(items); }, [items]);
+
+    // ── drag handlers ────────────────────────────────────────
+    const onDragStart = (id: string) => { dragId.current = id; };
+    const onDragEnter = (id: string) => { dragOver.current = id; };
+    const onDragEnd = async () => {
+        if (!dragId.current || !dragOver.current || dragId.current === dragOver.current) return;
+        const next = [...ordered];
+        const from = next.findIndex(i => i.id === dragId.current);
+        const to = next.findIndex(i => i.id === dragOver.current);
+        const [moved] = next.splice(from, 1);
+        next.splice(to, 0, moved);
+        // update sort_order ตามลำดับใหม่
+        const withOrder = next.map((item, idx) => ({ ...item, sort_order: idx + 1 }));
+        setOrdered(withOrder);
+        dragId.current = null;
+        dragOver.current = null;
+        // save to DB
+        setSaving(true);
+        try {
+            await Promise.all(withOrder.map(item => updateWishItem(item.id, { sort_order: item.sort_order })));
+            onRefresh();
+        } catch (e) { console.error(e); }
+        finally { setSaving(false); }
+    };
 
     const handleDelete = async (id: string) => {
         if (!confirm("ลบของขวัญชิ้นนี้?")) return;
@@ -416,49 +447,67 @@ function ItemsTab({ items, onRefresh }: { items: WishItemAdmin[]; onRefresh: () 
 
     return (
         <>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <p style={{ fontSize: 11, color: "#C9A98D", display: "flex", alignItems: "center", gap: 5 }}>
+                    {saving
+                        ? <><Loader2 size={11} style={{ animation: "spin 1s linear infinite" }} /> บันทึกลำดับ…</>
+                        : "⠿ ลากการ์ดเพื่อเรียงลำดับ"
+                    }
+                </p>
                 <motion.button
                     whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                    onClick={() => { setEditing({ id: "", created_at: "", title: "", description: null, image_url: null, product_link: null, category: null, mode: "crowdfund", target_amount: 0, is_granted: false, sort_order: items.length + 1 }); setIsNew(true); }}
+                    onClick={() => {
+                        setEditing({ id: "", created_at: "", title: "", description: null, image_url: null, product_link: null, category: null, mode: "crowdfund", target_amount: 0, is_granted: false, sort_order: items.length + 1 });
+                        setIsNew(true);
+                    }}
                     style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 8, border: "none", background: "#4A6B45", color: "white", fontSize: 13, cursor: "pointer", fontWeight: 500 }}
                 >
                     <Plus size={14} /> เพิ่ม Wish Item
                 </motion.button>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
-                {items.map(item => (
-                    <div key={item.id} style={{ background: "white", borderRadius: 12, overflow: "hidden", border: "1px solid rgba(143,175,138,0.15)", boxShadow: "0 1px 5px rgba(0,0,0,0.05)", opacity: item.is_granted ? 0.65 : 1 }}>
-                        {item.image_url
-                            ? <img src={item.image_url} alt={item.title} style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", display: "block" }} />
-                            : <div style={{ width: "100%", aspectRatio: "4/3", background: "#E8EFE7", display: "flex", alignItems: "center", justifyContent: "center" }}><ImageIcon size={24} style={{ color: "#8FAF8A", opacity: 0.4 }} /></div>
-                        }
-                        <div style={{ padding: "12px 14px" }}>
-                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
-                                <h3 style={{ fontSize: 14, fontWeight: 600, color: "#3A3530", lineHeight: 1.3, flex: 1 }}>{item.title}</h3>
-                                {item.is_granted && <span style={{ fontSize: 9, letterSpacing: "0.12em", background: "rgba(74,107,69,0.12)", color: "#4A6B45", padding: "2px 7px", borderRadius: 100, whiteSpace: "nowrap" }}>Granted</span>}
-                            </div>
-                            <div style={{ fontSize: 12, color: "#C9A98D", marginBottom: 10 }}>
-                                {item.mode === "crowdfund" ? "Crowdfund" : "Buy Now"} · {formatBaht(item.target_amount)} · #{item.sort_order}
-                            </div>
-                            <div style={{ display: "flex", gap: 6 }}>
-                                <button onClick={() => { setEditing(item); setIsNew(false); }}
-                                    style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 12px", borderRadius: 7, border: "1px solid rgba(143,175,138,0.3)", background: "transparent", cursor: "pointer", fontSize: 12, color: "#4A6B45" }}>
-                                    <Pencil size={11} /> แก้ไข
-                                </button>
-                                <button onClick={() => handleGrantToggle(item)} disabled={working === item.id}
-                                    style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 12px", borderRadius: 7, border: "1px solid rgba(143,175,138,0.3)", background: item.is_granted ? "rgba(74,107,69,0.1)" : "transparent", cursor: "pointer", fontSize: 12, color: "#4A6B45" }}>
-                                    <CheckCircle2 size={11} /> {item.is_granted ? "Unmark" : "Mark Granted"}
-                                </button>
-                                <button onClick={() => handleDelete(item.id)} disabled={working === item.id}
-                                    style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 7, border: "1px solid rgba(220,80,80,0.25)", background: "transparent", cursor: "pointer", fontSize: 12, color: "#C05050", marginLeft: "auto" }}>
-                                    <Trash2 size={11} />
-                                </button>
-                            </div>
-                        </div>
+            {/* ── Active wishes ── */}
+            {ordered.filter(i => !i.is_granted).length > 0 && (
+                <>
+                    <p style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "#4A6B45", opacity: 0.5, marginBottom: 10 }}>
+                        Active · {ordered.filter(i => !i.is_granted).length} items
+                    </p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14, marginBottom: 28 }}>
+                        {ordered.filter(i => !i.is_granted).map(item => (
+                            <ItemCard key={item.id} item={item} working={working}
+                                onDragStart={onDragStart} onDragEnter={onDragEnter} onDragEnd={onDragEnd}
+                                onEdit={() => { setEditing(item); setIsNew(false); }}
+                                onGrantToggle={() => handleGrantToggle(item)}
+                                onDelete={() => handleDelete(item.id)}
+                            />
+                        ))}
                     </div>
-                ))}
-            </div>
+                </>
+            )}
+
+            {/* ── Granted wishes ── */}
+            {ordered.filter(i => i.is_granted).length > 0 && (
+                <>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                        <div style={{ flex: 1, height: 1, background: "rgba(143,175,138,0.2)" }} />
+                        <p style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "#4A6B45", opacity: 0.5, flexShrink: 0 }}>
+                            ✦ Granted · {ordered.filter(i => i.is_granted).length} items
+                        </p>
+                        <div style={{ flex: 1, height: 1, background: "rgba(143,175,138,0.2)" }} />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+                        {ordered.filter(i => i.is_granted).map(item => (
+                            <ItemCard key={item.id} item={item} working={working}
+                                onDragStart={onDragStart} onDragEnter={onDragEnter} onDragEnd={onDragEnd}
+                                onEdit={() => { setEditing(item); setIsNew(false); }}
+                                onGrantToggle={() => handleGrantToggle(item)}
+                                onDelete={() => handleDelete(item.id)}
+                                isGrantedSection
+                            />
+                        ))}
+                    </div>
+                </>
+            )}
 
             <AnimatePresence>
                 {editing && (
@@ -471,6 +520,70 @@ function ItemsTab({ items, onRefresh }: { items: WishItemAdmin[]; onRefresh: () 
                 )}
             </AnimatePresence>
         </>
+    );
+}
+
+// ── ITEM CARD (shared by active + granted sections) ──────────
+function ItemCard({ item, working, onDragStart, onDragEnter, onDragEnd, onEdit, onGrantToggle, onDelete, isGrantedSection }: {
+    item: WishItemAdmin;
+    working: string | null;
+    onDragStart: (id: string) => void;
+    onDragEnter: (id: string) => void;
+    onDragEnd: () => void;
+    onEdit: () => void;
+    onGrantToggle: () => void;
+    onDelete: () => void;
+    isGrantedSection?: boolean;
+}) {
+    return (
+        <div
+            draggable
+            onDragStart={() => onDragStart(item.id)}
+            onDragEnter={() => onDragEnter(item.id)}
+            onDragEnd={onDragEnd}
+            onDragOver={e => e.preventDefault()}
+            style={{
+                background: isGrantedSection ? "#E8EFE7" : "white",
+                borderRadius: 12, overflow: "hidden",
+                border: `1px solid ${isGrantedSection ? "rgba(143,175,138,0.3)" : "rgba(143,175,138,0.15)"}`,
+                boxShadow: "0 1px 5px rgba(0,0,0,0.05)",
+                cursor: "grab",
+            }}
+        >
+            {/* drag handle */}
+            <div style={{ height: 5, background: "repeating-linear-gradient(90deg, rgba(143,175,138,0.25) 0px, rgba(143,175,138,0.25) 3px, transparent 3px, transparent 7px)" }} />
+
+            {item.image_url
+                ? <img src={item.image_url} alt={item.title} style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", display: "block" }} />
+                : <div style={{ width: "100%", aspectRatio: "4/3", background: isGrantedSection ? "rgba(143,175,138,0.15)" : "#E8EFE7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <ImageIcon size={22} style={{ color: "#8FAF8A", opacity: 0.35 }} />
+                </div>
+            }
+            <div style={{ padding: "11px 13px 13px" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 6, marginBottom: 3 }}>
+                    <h3 style={{ fontSize: 13, fontWeight: 600, color: "#3A3530", lineHeight: 1.3, flex: 1, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+                        {item.title}
+                    </h3>
+                </div>
+                <div style={{ fontSize: 11, color: "#C9A98D", marginBottom: 10 }}>
+                    {item.mode === "crowdfund" ? "Crowdfund" : "Buy Now"} · {formatBaht(item.target_amount)} · #{item.sort_order}
+                </div>
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                    <button onClick={onEdit}
+                        style={{ display: "flex", alignItems: "center", gap: 3, padding: "4px 10px", borderRadius: 7, border: "1px solid rgba(143,175,138,0.3)", background: "transparent", cursor: "pointer", fontSize: 11, color: "#4A6B45" }}>
+                        <Pencil size={10} /> แก้ไข
+                    </button>
+                    <button onClick={onGrantToggle} disabled={working === item.id}
+                        style={{ display: "flex", alignItems: "center", gap: 3, padding: "4px 10px", borderRadius: 7, border: "1px solid rgba(143,175,138,0.3)", background: isGrantedSection ? "rgba(74,107,69,0.12)" : "transparent", cursor: "pointer", fontSize: 11, color: "#4A6B45" }}>
+                        <CheckCircle2 size={10} /> {isGrantedSection ? "Unmark" : "Mark Granted"}
+                    </button>
+                    <button onClick={onDelete} disabled={working === item.id}
+                        style={{ display: "flex", alignItems: "center", gap: 3, padding: "4px 8px", borderRadius: 7, border: "1px solid rgba(220,80,80,0.25)", background: "transparent", cursor: "pointer", fontSize: 11, color: "#C05050", marginLeft: "auto" }}>
+                        <Trash2 size={10} />
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -529,7 +642,7 @@ function WishItemForm({ item, isNew, onClose, onSaved }: { item: WishItemAdmin; 
     };
 
     return (
-        <Modal onClose={onClose} title={isNew ? "เพิ่ม Wish Item ใหม่" : `แก้ไข: ${item.title}`} wide>
+        <Modal onClose={onClose} title={isNew ? "เพิ่ม Wish Item ใหม่" : `แก้ไข: ${item.title}`} wide noBackdropClose>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 {/* title */}
                 <div style={{ gridColumn: "1/-1" }}>
@@ -563,11 +676,7 @@ function WishItemForm({ item, isNew, onClose, onSaved }: { item: WishItemAdmin; 
                     <label style={labelCls}>ราคา / เป้าหมาย (฿) *</label>
                     <input type="number" value={form.target_amount} onChange={e => set("target_amount", parseFloat(e.target.value) || 0)} style={inputCls} />
                 </div>
-                {/* sort order */}
-                <div>
-                    <label style={labelCls}>ลำดับ (sort order)</label>
-                    <input type="number" value={form.sort_order} onChange={e => set("sort_order", parseInt(e.target.value) || 0)} style={inputCls} />
-                </div>
+
                 {/* product link */}
                 <div style={{ gridColumn: "1/-1" }}>
                     <label style={labelCls}>ลิงก์สินค้า</label>
@@ -624,18 +733,13 @@ function StatusPill({ status }: { status: string }) {
     );
 }
 
-function Modal({ children, onClose, title, wide }: { children: React.ReactNode; onClose: () => void; title: string; wide?: boolean }) {
-    useEffect(() => {
-        const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-        window.addEventListener("keydown", h);
-        return () => window.removeEventListener("keydown", h);
-    }, [onClose]);
-
+// noBackdropClose: ถ้า true จะปิดได้แค่ปุ่ม X เท่านั้น (ใช้กับ form ที่ยาว)
+function Modal({ children, onClose, title, wide, noBackdropClose }: { children: React.ReactNode; onClose: () => void; title: string; wide?: boolean; noBackdropClose?: boolean }) {
     return (
         <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-            onClick={onClose}
+            onClick={noBackdropClose ? undefined : onClose}
         >
             <motion.div
                 initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }}

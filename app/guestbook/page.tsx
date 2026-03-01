@@ -23,7 +23,7 @@ export default function GuestbookPage() {
     const { isLoggedIn, user, loginWithTwitch, logout } = useAuth();
 
     // ✨ 2. ดึง hasEntry กับ savedData ออกมาจาก Hook ด้วยค่ะ
-    const { isFetchingDB, hasEntry, savedData } = useLoadEntry();
+    const { isFetchingDB, hasEntry, savedData, error, retry } = useLoadEntry();
 
     // ✨ 3. สร้าง State ไว้สลับโหมด อ่าน/เขียน
     const [viewMode, setViewMode] = useState<'read' | 'edit'>('edit');
@@ -77,6 +77,23 @@ export default function GuestbookPage() {
                 <p className="font-serif text-[#4A3B32]/60 animate-pulse">
                     กำลังค้นหาความทรงจำของคุณในสวนแห่งนี้... 🌸
                 </p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#FDFCF0]">
+                <div className="flex flex-col items-center gap-4 text-center px-6">
+                    <p className="font-serif text-lg text-[#4A3B32]">🌧️</p>
+                    <p className="font-serif text-[#4A3B32]">{error}</p>
+                    <button
+                        onClick={retry}
+                        className="mt-2 px-6 py-2 rounded-full border border-[#4A3B32]/30 bg-white text-sm font-sans text-[#4A3B32] hover:bg-[#4A3B32]/5 transition-colors"
+                    >
+                        ลองใหม่อีกครั้ง
+                    </button>
+                </div>
             </div>
         );
     }

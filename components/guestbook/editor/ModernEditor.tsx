@@ -144,17 +144,7 @@ export function ModernEditor({
             .insertContent({
                 type: 'paragraph',
                 attrs: { textAlign: 'center' },
-                content: [{ type: 'text', marks: [{ type: 'textStyle', attrs: { color: '#6B4C30', fontFamily: '' } }], text: '─────────────────────' }]
-            })
-            .insertContent({
-                type: 'paragraph',
-                attrs: { textAlign: 'center' },
                 content: [{ type: 'text', marks: [{ type: 'textStyle', attrs: { color: '#6B4C30', fontFamily: "'Noto Serif Thai', serif" } }], text: `✦  ${insertPrompt}  ✦` }]
-            })
-            .insertContent({
-                type: 'paragraph',
-                attrs: { textAlign: 'center' },
-                content: [{ type: 'text', marks: [{ type: 'textStyle', attrs: { color: '#6B4C30', fontFamily: '' } }], text: '─────────────────────' }]
             })
             .insertContent({ type: 'paragraph', content: [] })
             .focus('end')

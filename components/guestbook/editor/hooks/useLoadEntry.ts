@@ -6,6 +6,14 @@ export function useLoadEntry() {
     const [isFetchingDB, setIsFetchingDB] = useState(true);
     const [hasEntry, setHasEntry] = useState(false);
     const [savedData, setSavedData] = useState<any>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [retryCount, setRetryCount] = useState(0);
+
+    const retry = () => {
+        setError(null);
+        setIsFetchingDB(true);
+        setRetryCount(prev => prev + 1);
+    };
 
     useEffect(() => {
         const fetchMyEntry = async () => {
@@ -58,13 +66,14 @@ export function useLoadEntry() {
                 }
             } catch (error) {
                 console.error('Error fetching past entry:', error);
+                setError('โหลดข้อมูลไม่ได้ กรุณาลองใหม่อีกครั้ง');
             } finally {
                 setIsFetchingDB(false);
             }
         };
 
         fetchMyEntry();
-    }, []);
+    }, [retryCount]);
 
-    return { isFetchingDB, hasEntry, savedData };
+    return { isFetchingDB, hasEntry, savedData, error, retry };
 }

@@ -1,7 +1,6 @@
-// components/wishing-well/SurpriseForm.tsx
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react"; // เพิ่ม useEffect
 import { motion } from "framer-motion";
 import { Gift, Paperclip, Loader2, CheckCircle2, X } from "lucide-react";
 import { submitSurprise } from "@/lib/wishingWellSync";
@@ -15,8 +14,24 @@ export function SurpriseForm() {
     const [message, setMessage] = useState("");
     const [slipFile, setSlipFile] = useState<File | null>(null);
     const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+    const [countdown, setCountdown] = useState(15); // เพิ่ม state สำหรับนับถอยหลัง
     const [errorMsg, setErrorMsg] = useState("");
     const slipRef = useRef<HTMLInputElement>(null);
+
+    // จัดการนับถอยหลังเมื่อส่งสำเร็จ
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (status === "success" && countdown > 0) {
+            timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
+        } else if (status === "success" && countdown === 0) {
+            // เมื่อครบ 15 วินาที ให้รีเซ็ตฟอร์ม
+            setItemName(""); setProductLink(""); setAmount("");
+            setMessage(""); setSlipFile(null);
+            setStatus("idle");
+            setCountdown(15);
+        }
+        return () => clearInterval(timer);
+    }, [status, countdown]);
 
     const canSubmit = status === "idle" && !!itemName.trim() && !!slipFile;
 
@@ -36,10 +51,7 @@ export function SurpriseForm() {
                 avatarUrl: user?.avatar,
             });
             setStatus("success");
-            setTimeout(() => {
-                setItemName(""); setProductLink(""); setAmount("");
-                setMessage(""); setSlipFile(null); setStatus("idle");
-            }, 3000);
+            setCountdown(15); // เริ่มนับจาก 15
         } catch (err) {
             console.error(err);
             setErrorMsg("Submission failed. Please try again.");
@@ -55,6 +67,50 @@ export function SurpriseForm() {
         transition: "border-color 0.2s",
     };
 
+    // ── Success overlay ──────────────────────────────────────────
+    if (status === "success") {
+        return (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                style={{
+                    background: "linear-gradient(135deg, rgba(232,239,231,0.7), rgba(253,251,244,0.9))",
+                    border: "1px solid rgba(143,175,138,0.28)",
+                    borderRadius: 14, padding: "40px 24px",
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center", gap: 14,
+                    textAlign: "center", minHeight: 200,
+                }}
+            >
+                <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+                    style={{
+                        width: 56, height: 56, borderRadius: "50%",
+                        background: "rgba(74,107,69,0.12)",
+                        border: "1.5px solid rgba(74,107,69,0.25)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                >
+                    <CheckCircle2 size={26} style={{ color: "#4A6B45" }} />
+                </motion.div>
+                <div>
+                    <p style={{ fontFamily: "var(--font-cormorant), serif", fontSize: 22, fontStyle: "italic", fontWeight: 300, color: "#6B4C35", marginBottom: 6 }}>
+                        ส่งของขวัญเซอร์ไพรส์แล้วค่ะ ✦
+                    </p>
+                    <p style={{ fontSize: 12, color: "#C9A98D", lineHeight: 1.6 }}>
+                        รอ admin ตรวจสอบสลิปก่อนนะคะ — ขอบคุณมากเลยค่ะ 🌿
+                    </p>
+                    {/* แสดง Countdown */}
+                    <p style={{ fontSize: 10, color: "#4A6B45", marginTop: 12, opacity: 0.6 }}>
+                        กลับสู่หน้าเดิมในอีก {countdown} วินาที
+                    </p>
+                </div>
+            </motion.div>
+        );
+    }
+
     return (
         <div style={{
             background: "linear-gradient(135deg, rgba(232,239,231,0.6), rgba(253,251,244,0.8))",
@@ -64,7 +120,7 @@ export function SurpriseForm() {
         }}
             className="surprise-grid"
         >
-            {/* left: description */}
+            {/* ... โค้ดส่วนที่เหลือยังคงเดิมทั้งหมด ... */}
             <div className="flex flex-col justify-center gap-3">
                 <div className="flex items-center gap-2">
                     <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(143,175,138,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -87,9 +143,7 @@ export function SurpriseForm() {
                 )}
             </div>
 
-            {/* right: form */}
             <div className="flex flex-col gap-2.5">
-                {/* row 1: name + price */}
                 <div className="flex gap-2">
                     <div className="flex flex-col gap-1 flex-1">
                         <label style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "#4A6B45", opacity: 0.6 }}>
@@ -119,7 +173,6 @@ export function SurpriseForm() {
                     </div>
                 </div>
 
-                {/* row 2: product link */}
                 <div className="flex flex-col gap-1">
                     <label style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "#4A6B45", opacity: 0.6 }}>
                         Product link
@@ -134,7 +187,6 @@ export function SurpriseForm() {
                     />
                 </div>
 
-                {/* row 3: message */}
                 <div className="flex flex-col gap-1">
                     <label style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "#4A6B45", opacity: 0.6 }}>
                         Message to Nair
@@ -151,10 +203,7 @@ export function SurpriseForm() {
                     />
                 </div>
 
-                {/* row 4: slip upload */}
-                {/* ── QR + slip row ── */}
                 <div className="flex gap-3 items-start">
-                    {/* QR code */}
                     <div className="flex flex-col items-center gap-1 flex-shrink-0">
                         <p style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#4A6B45", opacity: 0.55 }}>
                             โอนตาม QR
@@ -168,7 +217,6 @@ export function SurpriseForm() {
                         </div>
                     </div>
 
-                    {/* slip + button */}
                     <div className="flex flex-col gap-2 flex-1">
                         <p style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#4A6B45", opacity: 0.55 }}>
                             แนบสลิปยืนยัน *
@@ -221,15 +269,20 @@ export function SurpriseForm() {
                                 fontWeight: 500,
                             }}
                         >
-                            {status === "submitting" ? <><Loader2 size={14} className="animate-spin" /> กำลังส่ง…</> :
-                                status === "success" ? <><CheckCircle2 size={14} /> ส่งแล้ว รอตรวจสอบนะคะ ✦</> :
-                                    <><Gift size={14} /> ส่งของขวัญเซอร์ไพรส์</>}
+                            {status === "submitting" ? (
+                                <>
+                                    <Loader2 size={14} className="animate-spin" /> กำลังส่ง…
+                                </>
+                            ) : (
+                                <>
+                                    <Gift size={14} /> ส่งของขวัญเซอร์ไพรส์
+                                </>
+                            )}
                         </motion.button>
                     </div>
                 </div>
             </div>
 
-            {/* mobile stack override */}
             <style>{`@media(max-width:600px){.surprise-grid{grid-template-columns:1fr!important;}}`}</style>
         </div>
     );

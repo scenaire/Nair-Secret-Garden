@@ -216,7 +216,14 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
 
                     {/* ── ACTION BAR ── */}
                     <div className="flex-shrink-0" style={{ borderTop: "1px solid rgba(143,175,138,0.12)", background: "white" }}>
-                        {!isLoggedIn ? (
+                        {item.is_granted ? (
+                            <div className="flex items-center justify-center gap-2 py-3" style={{ color: "#4A6B45" }}>
+                                <CheckCircle2 size={14} />
+                                <span style={{ fontSize: 13, fontFamily: "var(--font-cormorant), serif", fontStyle: "italic" }}>
+                                    ความปรารถนานี้เป็นจริงแล้ว ✦
+                                </span>
+                            </div>
+                        ) : !isLoggedIn ? (
                             <p style={{ fontSize: 13, color: "#C9A98D", textAlign: "center", fontFamily: "var(--font-cormorant), serif", fontStyle: "italic", padding: "16px 20px" }}>
                                 Login with Twitch to contribute 🌿
                             </p>

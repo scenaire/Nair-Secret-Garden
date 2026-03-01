@@ -14,7 +14,8 @@ import {
     type WishItem, type LeaderboardEntry,
 } from "@/lib/wishingWellSync";
 
-type FilterMode = "all" | "active";
+// ปรับ FilterMode ให้เป็น Dreaming และ Granted ตามที่คุณ Nair ต้องการ
+type FilterMode = "dreaming" | "granted";
 
 export default function WishingWellPage() {
     const { isLoggedIn, user: uiUser, rawUser, loginWithTwitch, logout } = useAuth();
@@ -23,36 +24,27 @@ export default function WishingWellPage() {
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [myPending, setMyPending] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [filter, setFilter] = useState<FilterMode>("all");
+    const [filter, setFilter] = useState<FilterMode>("dreaming"); // เริ่มต้นที่ Still Dreaming
     const [panelItem, setPanelItem] = useState<WishItem | null>(null);
 
-    // ── initial load ───────────────────────────────────────────
     useEffect(() => {
         Promise.all([fetchWishItems(), fetchLeaderboard()])
             .then(([wi, lb]) => { setItems(wi); setLeaderboard(lb); })
-            .catch(e => {
-                console.error("fetch error:", JSON.stringify(e, null, 2));
-                console.error("message:", e?.message);
-                console.error("code:", e?.code);
-                console.error("details:", e?.details);
-            })
+            .catch(console.error)
             .finally(() => setIsLoading(false));
     }, []);
 
-    // ── load user's pending slips once logged in ───────────────
     useEffect(() => {
         if (!rawUser?.id) { setMyPending([]); return; }
         fetchMyPending(rawUser.id).then(setMyPending).catch(console.error);
     }, [rawUser?.id]);
 
-    // ── refresh after contribution ─────────────────────────────
     const handleContributed = useCallback(() => {
         if (!rawUser?.id) return;
-        // re-fetch items (totals updated) and pending list
         Promise.all([fetchWishItems(), fetchMyPending(rawUser.id)])
             .then(([wi, pending]) => { setItems(wi); setMyPending(pending); })
             .catch(console.error);
-        // update panel item too
+
         if (panelItem) {
             fetchWishItems().then((wi) => {
                 const updated = wi.find((i) => i.id === panelItem.id);
@@ -61,13 +53,10 @@ export default function WishingWellPage() {
         }
     }, [rawUser?.id, panelItem]);
 
-    // ── split items ────────────────────────────────────────────
-    const activeItems = items.filter((i) => !i.is_granted);
-    const grantedItems = items.filter((i) => i.is_granted);
-
-    const filteredActive = filter === "active"
-        ? activeItems.filter((i) => i.approved_total < i.target_amount)
-        : activeItems;
+    // ── Logic การกรองแบบใหม่ ──
+    const displayItems = items.filter((i) =>
+        filter === "dreaming" ? !i.is_granted : i.is_granted
+    );
 
     return (
         <main className="min-h-screen flex flex-col" style={{ backgroundColor: "#FDFBF4" }}>
@@ -77,12 +66,8 @@ export default function WishingWellPage() {
                 <div style={{ margin: "0 16px 16px", borderRadius: "0 0 12px 12px", background: "rgba(253,251,244,0.88)", boxShadow: "0 2px 24px rgba(74,107,69,0.09)", paddingBottom: 80 }}>
 
                     {/* ── HERO ── */}
-                    <div
-                        className="flex items-start justify-between gap-6 flex-wrap"
-                        style={{ padding: "36px 28px 28px", borderBottom: "1px solid rgba(143,175,138,0.12)" }}
-                    >
+                    <div className="flex items-start justify-between gap-6 flex-wrap" style={{ padding: "36px 28px 28px", borderBottom: "1px solid rgba(143,175,138,0.12)" }}>
                         <div className="flex flex-col gap-2">
-                            {/* well SVG */}
                             <svg width="88" height="80" viewBox="0 0 100 90" fill="none" style={{ marginBottom: 12 }}>
                                 <WellSVGContents />
                             </svg>
@@ -96,32 +81,23 @@ export default function WishingWellPage() {
                                 Toss a coin — every ripple turns a wish into something real ✨
                             </p>
 
-                            {/* login CTA if not logged in */}
                             {!isLoggedIn && (
                                 <motion.button
                                     onClick={loginWithTwitch}
                                     whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                                     className="flex items-center gap-2 mt-2 self-start"
-                                    style={{
-                                        padding: "8px 18px", borderRadius: 100,
-                                        background: "#9146FF", color: "white",
-                                        border: "none", cursor: "pointer",
-                                        fontSize: 12, fontWeight: 600,
-                                    }}
+                                    style={{ padding: "8px 18px", borderRadius: 100, background: "#9146FF", color: "white", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
                                 >
-                                    <TwitchIcon />
-                                    Login with Twitch to contribute
+                                    <TwitchIcon /> Login with Twitch to contribute
                                 </motion.button>
                             )}
                         </div>
-
-                        {/* Leaderboard */}
                         <Leaderboard entries={leaderboard} />
                     </div>
 
-                    {/* ── FILTER BAR ── */}
+                    {/* ── FILTER BAR (ปรับชื่อ Tab ตามโจทย์) ── */}
                     <div className="flex items-center gap-2.5" style={{ padding: "14px 24px", borderBottom: "1px solid rgba(143,175,138,0.1)" }}>
-                        {(["all", "active"] as FilterMode[]).map((f) => (
+                        {(["dreaming", "granted"] as FilterMode[]).map((f) => (
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
@@ -134,54 +110,48 @@ export default function WishingWellPage() {
                                     transition: "all 0.2s",
                                 }}
                             >
-                                {f === "all" ? "All wishes" : "Still dreaming"}
+                                {f === "dreaming" ? "Still dreaming" : "Granted wish"}
                             </button>
                         ))}
                     </div>
 
-                    {/* ── GIFT GRID ── */}
+                    {/* ── GRID แสดงผลตาม Tab ── */}
                     {isLoading ? (
                         <p className="text-center italic animate-pulse" style={{ color: "#8B5E52", fontFamily: "var(--font-cormorant), serif", fontSize: 15, padding: "60px 24px" }}>
                             Listening to the well… 🌿
                         </p>
                     ) : (
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 18, padding: "22px 24px 0" }}>
-                            {filteredActive.map((item, i) => (
-                                <WishCard
-                                    key={item.id}
-                                    item={item}
-                                    index={i}
-                                    hasPendingSlip={myPending.includes(item.id)}
-                                    onClick={() => setPanelItem(item)}
-                                />
-                            ))}
+                            {displayItems.length > 0 ? (
+                                displayItems.map((item, i) => (
+                                    filter === "dreaming" ? (
+                                        <WishCard
+                                            key={item.id}
+                                            item={item}
+                                            index={i}
+                                            hasPendingSlip={myPending.includes(item.id)}
+                                            onClick={() => setPanelItem(item)}
+                                        />
+                                    ) : (
+                                        <GrantedCard
+                                            key={item.id}
+                                            item={item}
+                                            onClick={() => setPanelItem(item)}
+                                        />
+                                    )
+                                ))
+                            ) : (
+                                <p className="col-span-full text-center py-10 opacity-40 text-sm italic">
+                                    {filter === "dreaming" ? "No wishes here... yet. ✨" : "No dreams have come true yet. 🌿"}
+                                </p>
+                            )}
                         </div>
                     )}
 
-                    {/* ── SEND A SURPRISE ── */}
-                    <div style={{ padding: "28px 24px 0" }}>
-                        <SurpriseForm />
-                    </div>
-
-                    {/* ── GRANTED SECTION ── */}
-                    {grantedItems.length > 0 && (
+                    {/* ── SURPRISE FORM (แสดงเฉพาะหน้า Dreaming เพื่อลดความรก) ── */}
+                    {filter === "dreaming" && (
                         <div style={{ padding: "28px 24px 0" }}>
-                            <div className="flex items-center gap-3" style={{ marginBottom: 16 }}>
-                                <div style={{ flex: 1, height: 1, background: "rgba(143,175,138,0.18)" }} />
-                                <span style={{ fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: "#4A6B45", opacity: 0.45, whiteSpace: "nowrap" }}>
-                                    Wishes that came true · {grantedItems.length} granted
-                                </span>
-                                <div style={{ flex: 1, height: 1, background: "rgba(143,175,138,0.18)" }} />
-                            </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
-                                {grantedItems.map((item) => (
-                                    <GrantedCard
-                                        key={item.id}
-                                        item={item}
-                                        onClick={() => setPanelItem(item)}
-                                    />
-                                ))}
-                            </div>
+                            <SurpriseForm />
                         </div>
                     )}
 
@@ -212,20 +182,14 @@ export default function WishingWellPage() {
                 </div>
             </div>
 
-            {/* ── DETAIL PANEL ── */}
             {panelItem && (
-                <WishPanel
-                    item={panelItem}
-                    onClose={() => setPanelItem(null)}
-                    onContributed={handleContributed}
-                />
+                <WishPanel item={panelItem} onClose={() => setPanelItem(null)} onContributed={handleContributed} />
             )}
         </main>
     );
 }
 
-// ── helpers ────────────────────────────────────────────────────
-
+// ── helpers ──
 function formatBaht(amount: number) {
     if (amount >= 1000) return `฿${(amount / 1000).toFixed(amount % 1000 === 0 ? 0 : 1)}k`;
     return `฿${amount.toLocaleString()}`;
