@@ -1,4 +1,5 @@
 // components/overlay/types.ts
+// (full replacement — adds wish event payloads with progress fields)
 
 import type { ThemeKey } from "./constants";
 
@@ -13,23 +14,46 @@ export interface SeedPayload {
 export interface BloomPayload {
     type: "bloom";
     username: string;
-    imageUrl?: string; // optional — shows placeholder polaroid if absent
+    imageUrl?: string;
 }
 
-export type OverlayPayload = SeedPayload | BloomPayload;
+export interface WishContributionPayload {
+    type: "wish_contribution";
+    username: string;
+    wishTitle: string;
+    amount: number;
+    avatarUrl?: string;
+    approvedTotal?: number; // current approved total BEFORE this contribution
+    targetAmount?: number; // wish item target
+}
+
+export interface WishSurprisePayload {
+    type: "wish_surprise";
+    username: string;
+    itemName: string;
+    message?: string;
+    amount?: number;
+    avatarUrl?: string;
+}
+
+export type OverlayPayload =
+    | SeedPayload
+    | BloomPayload
+    | WishContributionPayload
+    | WishSurprisePayload;
 
 // ── Internal state ─────────────────────────────────────────────────────────────
 
 export interface SeedBall {
-    bodyId: number;   // Matter.js body id
+    bodyId: number;
     themeKey: string;
 }
 
 export interface PlacedFlower {
     id: string;
-    x: number;  // left px
-    topY: number;  // top px (stem base - stemH)
-    baseY: number;  // stem base px
+    x: number;
+    topY: number;
+    baseY: number;
     stemH: number;
     flowerW: number;
     flowerType: string;
