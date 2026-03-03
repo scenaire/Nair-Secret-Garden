@@ -10,7 +10,7 @@ import {
     Heading
 } from 'lucide-react';
 
-import { TextureType, MenuType, PaperColorType } from '../types';
+import { TextureType, MenuType, PaperColorType, StickerData } from '../types';
 import { ToolButton, Divider } from '../ui/ToolbarUI';
 import { useRecentColors } from '../hooks/useRecentColors';
 
@@ -30,7 +30,7 @@ interface VintageToolbarProps {
     setTexture: (t: TextureType) => void;
     paperColor: PaperColorType;
     setPaperColor: (c: PaperColorType) => void;
-    addSticker: (content: string) => void;
+    addSticker: (data: Pick<StickerData, 'content' | 'type' | 'src'>) => void;
 }
 
 export function VintageToolbar({ editor, texture, setTexture, paperColor, setPaperColor, addSticker }: VintageToolbarProps) {

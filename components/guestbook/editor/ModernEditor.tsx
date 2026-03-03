@@ -18,7 +18,7 @@ import { FONTS } from '@/components/guestbook/editor/styles/fontStyle';
 import { VintageToolbar } from './toolbar/VintageToolbar';
 import { StickerCanvas } from './StickerCanvas';
 import { TextureType, ModernEditorProps, PaperColorType } from './types';
-import { PAPER_COLORS, TEXTURE_STYLES, PAPER_LINK_COLORS } from './constants';
+import { PAPER_COLORS, TEXTURE_STYLES, PAPER_LINK_COLORS, BIRTHDAY_PAPERS, BIRTHDAY_PAPER_HEX } from './constants';
 import { useStickers } from './hooks/useStickers';
 import { useAutoSave } from './hooks/useAutoSave';
 
@@ -37,7 +37,7 @@ export function ModernEditor({
         stickers, activeStickerId, setActiveStickerId,
         addSticker, updateSticker, removeSticker, clearActiveSticker,
         setStickers
-    } = useStickers(paperRef) as any;
+    } = useStickers(paperRef);
 
     const [texture, setTexture] = useState<TextureType>('plain');
     const [activePaperColor, setActivePaperColor] = useState<PaperColorType>(defaultPaperColor);
@@ -170,10 +170,17 @@ export function ModernEditor({
                 ref={paperRef}
                 className={cn("w-full h-full relative transition-colors duration-500", PAPER_COLORS[activePaperColor])}
                 style={{
-                    ...TEXTURE_STYLES[texture],
-                    '--theme-text-link': PAPER_LINK_COLORS[activePaperColor]
+                    '--theme-text-link': PAPER_LINK_COLORS[activePaperColor],
+                    // birthday paper ใช้ inline style เพราะ Tailwind ไม่ generate dynamic class
+                    ...(BIRTHDAY_PAPERS.has(activePaperColor as any) && {
+                        backgroundColor: BIRTHDAY_PAPER_HEX[activePaperColor],
+                    }),
                 } as React.CSSProperties}
             >
+                <div
+                    className="absolute inset-0 pointer-events-none z-0"
+                    style={TEXTURE_STYLES[texture]}
+                />
                 <EditorContent editor={editor} className="relative z-10" />
                 <StickerCanvas
                     stickers={stickers}

@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Image from 'next/image';
 import { Rnd } from 'react-rnd';
 import { RotateCcw, RotateCw, Trash2 } from 'lucide-react';
 import { StickerData } from './types';
@@ -30,7 +31,6 @@ export function StickerCanvas({
                     ? parentHeight * (sticker.yPercent / 100)
                     : (sticker.yPx ?? 0);
 
-                // ✨ แปลง widthPercent → pixel จริงๆ เพื่อให้ Rnd รู้ขนาด
                 const widthPx = parentWidth * (sticker.widthPercent / 100);
 
                 return (
@@ -69,14 +69,29 @@ export function StickerCanvas({
                                 <button onClick={() => removeSticker(sticker.id)} className="p-1.5 hover:bg-red-50 rounded-full text-red-400"><Trash2 size={14} /></button>
                             </div>
                         )}
-                        {/* ✨ เปลี่ยนจาก SVG เป็น span เพื่อให้ขนาด emoji สัมพันธ์กับ container จริงๆ */}
                         <div
                             className="w-full h-full cursor-grab active:cursor-grabbing flex items-center justify-center"
                             style={{ transform: `rotate(${sticker.rotation}deg)`, transition: 'transform 0.2s ease' }}
                         >
-                            <span style={{ fontSize: `${widthPx * 0.8}px`, lineHeight: 1 }} className="select-none">
-                                {sticker.content}
-                            </span>
+                            {sticker.type === 'image' && sticker.src
+                                ? (
+                                    // Twitch sticker (image/gif)
+                                    <Image
+                                        src={sticker.src}
+                                        alt={sticker.content}
+                                        width={widthPx}
+                                        height={widthPx}
+                                        className="w-full h-full object-contain select-none pointer-events-none"
+                                        unoptimized // จำเป็นสำหรับ .gif
+                                        draggable={false}
+                                    />
+                                ) : (
+                                    // Emoji sticker (เหมือนเดิม)
+                                    <span style={{ fontSize: `${widthPx * 0.8}px`, lineHeight: 1 }} className="select-none">
+                                        {sticker.content}
+                                    </span>
+                                )
+                            }
                         </div>
                     </Rnd>
                 );

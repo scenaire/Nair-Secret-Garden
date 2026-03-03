@@ -1,17 +1,16 @@
-// components/guestbook/editor/hooks/useStickers.ts
 import { useState, useCallback, RefObject } from 'react';
-import { StickerData } from './useAutoSave';
+import { StickerData } from '../types';
 
 export function useStickers(paperRef: RefObject<HTMLDivElement | null>) {
     const [stickers, setStickers] = useState<StickerData[]>([]);
     const [activeStickerId, setActiveStickerId] = useState<string | null>(null);
 
-    const addSticker = useCallback((content: string) => {
+    const addSticker = useCallback((data: Pick<StickerData, 'content' | 'type' | 'src'>) => {
         const newSticker: StickerData = {
             id: `sticker-${Date.now()}`,
-            content,
+            ...data,
             xPercent: 50,
-            yPercent: 20, // ✨ ใช้ yPercent แทน yPx
+            yPercent: 20,
             widthPercent: 25,
             rotation: Math.random() * 20 - 10,
         };

@@ -2,16 +2,17 @@ import { type PaperColorType } from './constants';
 
 export interface StickerData {
     id: string;
-    content: string;
+    content: string;       // emoji string หรือ alt text สำหรับ image sticker
+    type?: 'emoji' | 'image'; // ถ้าไม่มี = emoji (backward compat)
+    src?: string;          // path ของไฟล์ภาพ เช่น /stickers/twitch/cnairsHihi.png
     xPercent: number;
     yPercent: number;
-    yPx?: number; // backward compat สำหรับ draft เก่า
+    yPx?: number;          // backward compat สำหรับ draft เก่า
     widthPercent: number;
     rotation: number;
 }
 
-export type TextureType = 'plain' | 'dotted' | 'vintage-grid' | 'soft-paper';
-
+export type TextureType = 'plain' | 'dotted' | 'vintage-grid' | 'soft-paper' | 'birthday' | 'ruled';
 export type TabType = 'write' | 'decorate' | 'paper';
 
 export interface ThemeConfig {
@@ -49,12 +50,10 @@ export interface ModernEditorProps {
 }
 
 export type MenuType = 'font' | 'typo' | 'color' | 'highlight' | 'link' | 'image' | 'sticker' | 'paper';
-
 export type { PaperColorType };
 
 export type MoodType = "warm" | "playful" | "shy" | "sincere" | "teasing" | "nostalgic" |
-    "proud" |
-    "comforting";
+    "proud" | "comforting";
 
 export interface Question {
     text: string;

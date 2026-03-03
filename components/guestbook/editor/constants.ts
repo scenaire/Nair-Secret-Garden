@@ -25,7 +25,7 @@ export const PAPER_COLORS = {
     plumNight: "bg-[#3A314F]",
     deepTeal: "bg-[#244B4B]",
     wineRose: "bg-[#4A2E3A]",
-    charcoalInk: "bg-[#2A2F36]"
+    charcoalInk: "bg-[#2A2F36]",
 } as const;
 
 export type PaperColorType = keyof typeof PAPER_COLORS;
@@ -36,7 +36,6 @@ export const PAPER_COLLECTIONS: Record<string, PaperColorType[]> = {
     " 🌿 Garden Light": ["almond", "warmSand", "oliveMilk", "terracottaBlush", "linen"],
     " 🧁 Candy Pop": ["rubyPop", "mintSplash", "sunnyMango", "violetCandy", "skyBubble"],
     " 🌙 Night Letter": ["twilightBlue", "plumNight", "deepTeal", "wineRose", "charcoalInk"],
-
 };
 
 export const PAPER_LINK_COLORS: Record<PaperColorType, string> = {
@@ -63,7 +62,18 @@ export const PAPER_LINK_COLORS: Record<PaperColorType, string> = {
     plumNight: "#cfbff5ff",
     deepTeal: "#f1ffa5ff",
     wineRose: "#ede0e6ff",
-    charcoalInk: "#c0c4d3ff"
+    charcoalInk: "#c0c4d3ff",
+};
+
+export const BIRTHDAY_PAPERS = new Set([
+    'birthdayBlush', 'birthdayButter', 'birthdayMint', 'birthdayLavender'
+] as const);
+
+export const BIRTHDAY_PAPER_HEX: Record<string, string> = {
+    birthdayBlush: '#FFF0F3',
+    birthdayButter: '#FFFBEF',
+    birthdayMint: '#F0FBF5',
+    birthdayLavender: '#F6F0FF',
 };
 
 // ✨ ข้อมูล Mood & Tone แบบใหม่ที่ใช้ CSS Variables!
@@ -259,7 +269,25 @@ export const TEXTURE_STYLES: Record<TextureType, React.CSSProperties> = {
     'soft-paper': {
         backgroundImage: `radial-gradient(rgba(0,0,0,0.02) 1px, transparent 1px)`,
         backgroundSize: '5px 5px'
-    }
+    },
+    'ruled': {
+        backgroundImage: `linear-gradient(transparent calc(100% - 1px), rgba(120, 100, 90, 0.12) 1px)`,
+        backgroundSize: '100% 2rem',
+    },
+    'birthday': {
+        // ใช้ CSS gradient จำลองลายเค้ก + ดอกไม้ + ribbon
+        // pattern tile 80x80px มี 3 motif หมุนเวียน
+        backgroundImage: `
+            radial-gradient(circle at 20px 20px, #F2C6C2 3px, transparent 3px),
+            radial-gradient(circle at 60px 60px, #F2C6C2 3px, transparent 3px),
+            radial-gradient(circle at 20px 60px, #C8E6C9 3px, transparent 3px),
+            radial-gradient(circle at 60px 20px, #C8E6C9 3px, transparent 3px),
+            radial-gradient(ellipse at 40px 40px, #F9E4B7 5px 3px, transparent 5px)
+        `,
+        backgroundSize: '80px 80px',
+        opacity: 1,
+    } as React.CSSProperties,
+
 };
 
 // ✨ ย้ายสไตล์อารมณ์มาไว้ที่นี่
@@ -324,3 +352,32 @@ export const STICKER_PACKS = {
     cute: ['🧸', '🎀', '🍓', '🍰', '💌', '💖'],
     vintage: ['☕', '🕊️', '🕰️', '📜', '🗝️', '🕯️']
 } as const;
+
+export interface TwitchSticker {
+    name: string;   // ชื่อ sticker (ใช้เป็น alt + key)
+    src: string;    // path สำหรับ <img>
+}
+
+export const TWITCH_STICKERS: TwitchSticker[] = [
+    { name: 'cnairsBlanket', src: '/stickers/twitch/cnairsBlanket.png' },
+    { name: 'cnairsCake', src: '/stickers/twitch/cnairsCake.png' },
+    { name: 'cnairsDisgust', src: '/stickers/twitch/cnairsDisgust.png' },
+    { name: 'cnairsDontWantHorrorGame', src: '/stickers/twitch/cnairsDontWantHorrorGame.png' },
+    { name: 'cnairsExcite', src: '/stickers/twitch/cnairsExcite.png' },
+    { name: 'cnairsHihi', src: '/stickers/twitch/cnairsHihi.png' },
+    { name: 'cnairsHyperRave', src: '/stickers/twitch/cnairsHyperRave.gif' },
+    { name: 'cnairsIntense', src: '/stickers/twitch/cnairsIntense.png' },
+    { name: 'cnairsKanpai', src: '/stickers/twitch/cnairsKanpai.png' },
+    { name: 'cnairsKnife', src: '/stickers/twitch/cnairsKnife.png' },
+    { name: 'cnairsNumb', src: '/stickers/twitch/cnairsNumb.png' },
+    { name: 'cnairsOnFire', src: '/stickers/twitch/cnairsOnFire.png' },
+    { name: 'cnairsPeek', src: '/stickers/twitch/cnairsPeek.png' },
+    { name: 'cnairsPopcorn', src: '/stickers/twitch/cnairsPopcorn.png' },
+    { name: 'cnairsPray', src: '/stickers/twitch/cnairsPray.png' },
+    { name: 'cnairsRave', src: '/stickers/twitch/cnairsRave.gif' },
+    { name: 'cnairsScared', src: '/stickers/twitch/cnairsScared.png' },
+    { name: 'cnairsShy', src: '/stickers/twitch/cnairsShy.png' },
+    { name: 'cnairsSideEye', src: '/stickers/twitch/cnairsSideEye.png' },
+    { name: 'cnairsTeaTime', src: '/stickers/twitch/cnairsTeaTime.png' },
+    { name: 'cnairsYippie', src: '/stickers/twitch/cnairsYippie.gif' },
+];
