@@ -49,8 +49,10 @@ export function useLoadEntry() {
                         stickers: (stickers || []).map(s => ({
                             id: s.id,
                             content: s.sticker_type,
+                            type: s.content_type ?? 'emoji',   // เพิ่ม
+                            src: s.src ?? undefined,           // เพิ่ม
                             xPercent: s.x_position,
-                            yPercent: s.y_position, // ✨ โหลดเป็น percent ตรงๆ จาก DB
+                            yPercent: s.y_position,
                             widthPercent: s.scale || 25,
                             rotation: s.rotation,
                         }))

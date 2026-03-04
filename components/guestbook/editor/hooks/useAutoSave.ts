@@ -3,12 +3,15 @@ import { useState, useEffect, useCallback } from 'react';
 
 const DRAFT_KEY = 'guestbook_draft_data';
 
+// useAutoSave.ts — แก้ StickerData interface
 export interface StickerData {
     id: string;
     content: string;
+    type?: 'emoji' | 'image';  // เพิ่ม
+    src?: string;               // เพิ่ม
     xPercent: number;
     yPercent: number;
-    yPx?: number; // backward compat สำหรับ draft เก่า
+    yPx?: number;
     widthPercent: number;
     rotation: number;
 }

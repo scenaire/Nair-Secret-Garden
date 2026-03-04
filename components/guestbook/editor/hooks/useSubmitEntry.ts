@@ -55,6 +55,8 @@ export function useSubmitEntry() {
                 const stickerPayload = draft.stickers.map(s => ({
                     entry_id: entry.id,
                     sticker_type: s.content,
+                    content_type: s.type ?? 'emoji',   // เพิ่ม
+                    src: s.src ?? null,                // เพิ่ม
                     x_position: s.xPercent,
                     y_position: s.yPercent ?? (s as any).yPx ?? 0,
                     rotation: s.rotation,
