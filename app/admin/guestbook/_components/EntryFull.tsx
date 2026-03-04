@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { GuestbookEntry } from "../_types";
 import { getTheme, getPaperBg, getPaperLinkColor, getTextureStyle } from "../_constants";
+import Image from 'next/image';
 
 interface EntryFullProps {
     entry: GuestbookEntry;
@@ -83,7 +84,21 @@ export function EntryFull({ entry, showAuthor }: EntryFullProps) {
                                 className="absolute select-none flex items-center justify-center"
                                 style={{ left: xPx, top: yPx, width: widthPx, height: widthPx, transform: `rotate(${s.rotation}deg)` }}
                             >
-                                <span style={{ fontSize: `${widthPx * 0.8}px`, lineHeight: 1 }}>{s.content}</span>
+                                {s.type === 'image' && s.src
+                                    ? (
+                                        <Image
+                                            src={s.src}
+                                            alt={s.content}
+                                            width={widthPx}
+                                            height={widthPx}
+                                            className="w-full h-full object-contain"
+                                            unoptimized
+                                            draggable={false}
+                                        />
+                                    ) : (
+                                        <span style={{ fontSize: `${widthPx * 0.8}px`, lineHeight: 1 }}>{s.content}</span>
+                                    )
+                                }
                             </div>
                         );
                     })}

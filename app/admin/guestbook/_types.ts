@@ -1,6 +1,8 @@
 export interface Sticker {
     id: string;
     content: string;
+    type?: 'emoji' | 'image';  // เพิ่ม
+    src?: string;               // เพิ่ม
     xPercent: number;
     yPercent: number;
     widthPercent: number;
