@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react"; // เพิ่ม useEffect
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Gift, Paperclip, Loader2, CheckCircle2, X, Link } from "lucide-react";
+import { Gift, Paperclip, Loader2, CheckCircle2, X } from "lucide-react";
 import { submitSurprise } from "@/lib/wishingWellSync";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -14,29 +14,24 @@ export function SurpriseForm() {
     const [message, setMessage] = useState("");
     const [slipFile, setSlipFile] = useState<File | null>(null);
     const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
-    const [countdown, setCountdown] = useState(15); // เพิ่ม state สำหรับนับถอยหลัง
+    const [countdown, setCountdown] = useState(15);
     const [errorMsg, setErrorMsg] = useState("");
     const slipRef = useRef<HTMLInputElement>(null);
-    const [slipMode, setSlipMode] = useState<"file" | "url">("file");
-    const [slipUrl, setSlipUrl] = useState("");
 
-    // จัดการนับถอยหลังเมื่อส่งสำเร็จ
     useEffect(() => {
         let timer: NodeJS.Timeout;
         if (status === "success" && countdown > 0) {
             timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
         } else if (status === "success" && countdown === 0) {
-            // เมื่อครบ 15 วินาที ให้รีเซ็ตฟอร์ม
             setItemName(""); setProductLink(""); setAmount("");
-            setMessage(""); setSlipFile(null); setSlipUrl(""); setSlipMode("file");
+            setMessage(""); setSlipFile(null);
             setStatus("idle");
             setCountdown(15);
         }
         return () => clearInterval(timer);
     }, [status, countdown]);
 
-    const hasSlip = slipMode === "file" ? !!slipFile : !!slipUrl.trim();
-    const canSubmit = status === "idle" && !!itemName.trim() && hasSlip;
+    const canSubmit = status === "idle" && !!itemName.trim() && !!slipFile;
 
     const handleSubmit = useCallback(async () => {
         if (!isLoggedIn || !rawUser || !canSubmit) return;
@@ -48,20 +43,19 @@ export function SurpriseForm() {
                 productLink: productLink.trim() || undefined,
                 amount: amount ? parseFloat(amount) : undefined,
                 message: message.trim() || undefined,
-                slipFile: slipMode === "file" ? slipFile! : undefined,
-                slipUrl: slipMode === "url" ? slipUrl.trim() : undefined,
+                slipFile: slipFile!,
                 userId: rawUser.id,
                 twitchName: user?.name ?? "anonymous",
                 avatarUrl: user?.avatar,
             });
             setStatus("success");
-            setCountdown(15); // เริ่มนับจาก 15
+            setCountdown(15);
         } catch (err) {
             console.error(err);
             setErrorMsg("Submission failed. Please try again.");
             setStatus("error");
         }
-    }, [isLoggedIn, rawUser, user, itemName, productLink, amount, message, slipFile, slipUrl, slipMode, canSubmit]);
+    }, [isLoggedIn, rawUser, user, itemName, productLink, amount, message, slipFile, canSubmit]);
 
     const inputStyle: React.CSSProperties = {
         width: "100%", padding: "9px 12px",
@@ -71,7 +65,6 @@ export function SurpriseForm() {
         transition: "border-color 0.2s",
     };
 
-    // ── Success overlay ──────────────────────────────────────────
     if (status === "success") {
         return (
             <motion.div
@@ -106,7 +99,6 @@ export function SurpriseForm() {
                     <p style={{ fontSize: 12, color: "#C9A98D", lineHeight: 1.6 }}>
                         รอ admin ตรวจสอบสลิปก่อนนะคะ — ขอบคุณมากเลยค่ะ 🌿
                     </p>
-                    {/* แสดง Countdown */}
                     <p style={{ fontSize: 10, color: "#4A6B45", marginTop: 12, opacity: 0.6 }}>
                         กลับสู่หน้าเดิมในอีก {countdown} วินาที
                     </p>
@@ -124,7 +116,6 @@ export function SurpriseForm() {
         }}
             className="surprise-grid"
         >
-            {/* ... โค้ดส่วนที่เหลือยังคงเดิมทั้งหมด ... */}
             <div className="flex flex-col justify-center gap-3">
                 <div className="flex items-center gap-2">
                     <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(143,175,138,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -225,69 +216,31 @@ export function SurpriseForm() {
                         <p style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#4A6B45", opacity: 0.55 }}>
                             แนบสลิปยืนยัน *
                         </p>
-                        {/* mode tabs */}
-                        <div className="flex" style={{ marginBottom: 2, opacity: !isLoggedIn ? 0.45 : 1 }}>
-                            {(["file", "url"] as const).map((m) => (
-                                <button key={m}
-                                    onClick={() => { if (!isLoggedIn) return; setSlipMode(m); setErrorMsg(""); }}
-                                    style={{
-                                        flex: 1, padding: "5px 0", fontSize: 10, cursor: isLoggedIn ? "pointer" : "not-allowed",
-                                        border: "1px solid rgba(143,175,138,0.3)",
-                                        borderLeft: m === "url" ? "none" : undefined,
-                                        borderRadius: m === "file" ? "6px 0 0 6px" : "0 6px 6px 0",
-                                        background: slipMode === m ? "rgba(143,175,138,0.16)" : "rgba(200,222,197,0.04)",
-                                        color: slipMode === m ? "#4A6B45" : "#C9A98D",
-                                        fontWeight: slipMode === m ? 500 : 400,
-                                        transition: "all 0.15s",
-                                    }}
-                                >
-                                    {m === "file" ? "อัปโหลดไฟล์" : "ใส่ URL"}
+
+                        <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{
+                                padding: "9px 13px",
+                                border: `1.5px dashed ${slipFile ? "rgba(143,175,138,0.6)" : "rgba(143,175,138,0.35)"}`,
+                                borderRadius: 8,
+                                background: slipFile ? "rgba(143,175,138,0.08)" : "rgba(200,222,197,0.05)",
+                                opacity: !isLoggedIn ? 0.45 : 1,
+                            }}
+                            onClick={() => isLoggedIn && slipRef.current?.click()}
+                        >
+                            <Paperclip size={13} style={{ color: "#8FAF8A", flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, color: "#C9A98D", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {slipFile ? slipFile.name : "แนบสลิปที่นี่"}
+                            </span>
+                            <span style={{ fontSize: 10, color: "#C9A98D", opacity: 0.5 }}>PNG · JPG</span>
+                            {slipFile && (
+                                <button onClick={(e) => { e.stopPropagation(); setSlipFile(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                                    <X size={12} style={{ color: "#C9A98D" }} />
                                 </button>
-                            ))}
+                            )}
+                            <input ref={slipRef} type="file" accept="image/*" className="hidden"
+                                onChange={(e) => { const f = e.target.files?.[0]; if (f && f.size <= 5 * 1024 * 1024) { setSlipFile(f); setErrorMsg(""); } else if (f) { setErrorMsg("File must be under 5MB."); } }} />
                         </div>
-                        {slipMode === "file" ? (
-                            <div
-                                className="flex items-center gap-2 cursor-pointer"
-                                style={{
-                                    padding: "9px 13px",
-                                    border: `1.5px dashed ${slipFile ? "rgba(143,175,138,0.6)" : "rgba(143,175,138,0.35)"}`,
-                                    borderRadius: 8,
-                                    background: slipFile ? "rgba(143,175,138,0.08)" : "rgba(200,222,197,0.05)",
-                                    opacity: !isLoggedIn ? 0.45 : 1,
-                                }}
-                                onClick={() => isLoggedIn && slipRef.current?.click()}
-                            >
-                                <Paperclip size={13} style={{ color: "#8FAF8A", flexShrink: 0 }} />
-                                <span style={{ fontSize: 12, color: "#C9A98D", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                    {slipFile ? slipFile.name : "แนบสลิปที่นี่"}
-                                </span>
-                                <span style={{ fontSize: 10, color: "#C9A98D", opacity: 0.5 }}>PNG · JPG</span>
-                                {slipFile && (
-                                    <button onClick={(e) => { e.stopPropagation(); setSlipFile(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                                        <X size={12} style={{ color: "#C9A98D" }} />
-                                    </button>
-                                )}
-                                <input ref={slipRef} type="file" accept="image/*" className="hidden"
-                                    onChange={(e) => { const f = e.target.files?.[0]; if (f && f.size <= 5 * 1024 * 1024) { setSlipFile(f); setErrorMsg(""); } else if (f) { setErrorMsg("File must be under 5MB."); } }} />
-                            </div>
-                        ) : (
-                            <div style={{ opacity: !isLoggedIn ? 0.45 : 1 }}>
-                                <input
-                                    type="url" value={slipUrl}
-                                    onChange={(e) => { setSlipUrl(e.target.value); setErrorMsg(""); }}
-                                    placeholder="แนบสลิปที่นี่ https://…"
-                                    disabled={!isLoggedIn}
-                                    style={{
-                                        width: "100%", padding: "9px 12px", fontSize: 12, color: "#6B4C35",
-                                        border: `1px solid ${slipUrl ? "rgba(143,175,138,0.5)" : "rgba(143,175,138,0.25)"}`,
-                                        borderRadius: 8, background: "rgba(255,255,255,0.7)", outline: "none",
-                                        fontFamily: "var(--font-noto-sans-thai), sans-serif",
-                                    }}
-                                    onFocus={(e) => e.target.style.borderColor = "#8FAF8A"}
-                                    onBlur={(e) => e.target.style.borderColor = slipUrl ? "rgba(143,175,138,0.5)" : "rgba(143,175,138,0.25)"}
-                                />
-                            </div>
-                        )}
 
                         {errorMsg && (
                             <p className="flex items-center gap-1" style={{ fontSize: 11, color: "#E87A9A" }}>

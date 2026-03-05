@@ -2,14 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, CheckCircle2, XCircle, Gift } from 'lucide-react';
+import { Bell, CheckCircle2, AlertCircle, Gift, X } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 
 const TYPE_CONFIG = {
-    wishlist_approved: { icon: <CheckCircle2 size={13} />, color: '#4A6B45', bg: 'rgba(74,107,69,0.08)' },
-    wishlist_rejected: { icon: <XCircle size={13} />, color: '#C05050', bg: 'rgba(200,80,80,0.07)' },
-    surprise_approved: { icon: <Gift size={13} />, color: '#4A6B45', bg: 'rgba(74,107,69,0.08)' },
-    surprise_rejected: { icon: <XCircle size={13} />, color: '#C05050', bg: 'rgba(200,80,80,0.07)' },
+    wishlist_approved: { icon: <CheckCircle2 size={16} />, color: '#4A6B45', bg: 'rgba(74,107,69,0.08)' },
+    wishlist_rejected: { icon: <AlertCircle size={16} />, color: '#C05050', bg: 'rgba(200,80,80,0.07)' },
+    surprise_approved: { icon: <Gift size={16} />, color: '#4A6B45', bg: 'rgba(74,107,69,0.08)' },
+    surprise_rejected: { icon: <AlertCircle size={16} />, color: '#C05050', bg: 'rgba(200,80,80,0.07)' },
 };
 
 function timeAgo(dateStr: string) {
@@ -25,7 +25,8 @@ function timeAgo(dateStr: string) {
 export function NotificationBell({ userId }: { userId: string | null }) {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
-    const { notifications, unreadCount, markAllRead } = useNotifications(userId);
+    // 🔧 เพิ่ม deleteNotification จาก hook
+    const { notifications, unreadCount, markAllRead, deleteNotification } = useNotifications(userId);
 
     // ปิด dropdown เมื่อคลิกข้างนอก
     useEffect(() => {
@@ -36,11 +37,12 @@ export function NotificationBell({ userId }: { userId: string | null }) {
         return () => document.removeEventListener('mousedown', h);
     }, []);
 
+    // 🔧 Bug fix #1: markAllRead ทันทีที่เปิด dropdown ไม่ใช่ delay แล้วค่อยเรียก
     const handleOpen = () => {
-        setOpen(o => !o);
-        // mark as read หลังจาก user ปิด dropdown ไปแล้ว (delay 3 วินาที)
-        if (!open && unreadCount > 0) {
-            setTimeout(() => markAllRead(), 3000);
+        const isOpening = !open;
+        setOpen(isOpening);
+        if (isOpening && unreadCount > 0) {
+            markAllRead();
         }
     };
 
@@ -124,6 +126,16 @@ export function NotificationBell({ userId }: { userId: string | null }) {
                                                         {timeAgo(n.created_at)}
                                                     </p>
                                                 </div>
+
+                                                {/* 🔧 Bug fix #2: ปุ่มลบแต่ละ notification */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => deleteNotification(n.id)}
+                                                    className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full transition-colors hover:bg-[rgba(192,80,80,0.1)]"
+                                                    style={{ color: '#C9A98D' }}
+                                                >
+                                                    <X size={11} />
+                                                </button>
                                             </div>
                                         </div>
                                     );

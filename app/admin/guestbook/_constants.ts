@@ -56,6 +56,23 @@ export const TEXTURE_STYLES: Record<string, React.CSSProperties> = {
         backgroundImage: `radial-gradient(rgba(0,0,0,0.02) 1px, transparent 1px)`,
         backgroundSize: "5px 5px",
     },
+    'ruled': {
+        backgroundImage: `linear-gradient(transparent calc(100% - 1px), rgba(120, 100, 90, 0.12) 1px)`,
+        backgroundSize: '100% 2rem',
+    },
+    'birthday': {
+        // ใช้ CSS gradient จำลองลายเค้ก + ดอกไม้ + ribbon
+        // pattern tile 80x80px มี 3 motif หมุนเวียน
+        backgroundImage: `
+            radial-gradient(circle at 20px 20px, #F2C6C2 3px, transparent 3px),
+            radial-gradient(circle at 60px 60px, #F2C6C2 3px, transparent 3px),
+            radial-gradient(circle at 20px 60px, #C8E6C9 3px, transparent 3px),
+            radial-gradient(circle at 60px 20px, #C8E6C9 3px, transparent 3px),
+            radial-gradient(ellipse at 40px 40px, #F9E4B7 5px 3px, transparent 5px)
+        `,
+        backgroundSize: '80px 80px',
+        opacity: 1,
+    }
 };
 
 export const getTheme = (key: string) => THEMES[key] || THEMES.cream;

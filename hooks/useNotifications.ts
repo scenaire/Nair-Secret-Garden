@@ -17,7 +17,7 @@ export interface Notification {
 export function useNotifications(userId: string | null) {
     const [notifications, setNotifications] = useState<Notification[]>([]);
 
-    const fetch = useCallback(async () => {
+    const fetchNotifications = useCallback(async () => {
         if (!userId) return;
         const supabase = createClient();
         const { data } = await supabase
@@ -29,21 +29,42 @@ export function useNotifications(userId: string | null) {
         setNotifications(data ?? []);
     }, [userId]);
 
-    // mark all as read เมื่อ user เปิด dropdown
+    // 🔧 Bug fix #1: แค่ mark is_read = true ใน state ไม่ได้ล้างข้อความออก
     const markAllRead = useCallback(async () => {
-        if (!userId || notifications.length === 0) return;
+        if (!userId) return;
+        const unread = notifications.filter(n => !n.is_read);
+        if (unread.length === 0) return;
+
         const supabase = createClient();
         await supabase
             .from('notifications')
             .update({ is_read: true })
             .eq('user_id', userId)
             .eq('is_read', false);
-        setNotifications([]);
-    }, [userId, notifications.length]);
+
+        // อัปเดต state เฉพาะ flag is_read ข้อความยังอยู่
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    }, [userId, notifications]);
+
+    // 🔧 Bug fix #2: เพิ่ม deleteNotification พร้อม error check
+    const deleteNotification = useCallback(async (id: string) => {
+        const supabase = createClient();
+        const { error } = await supabase
+            .from('notifications')
+            .delete()
+            .eq('id', id);
+
+        // อัปเดต state เฉพาะเมื่อ delete สำเร็จ ป้องกันข้อมูลกลับมาเมื่อ refresh
+        if (error) {
+            console.error('[deleteNotification] Supabase error:', error);
+            return;
+        }
+        setNotifications(prev => prev.filter(n => n.id !== id));
+    }, []);
 
     useEffect(() => {
-        fetch();
-    }, [fetch]);
+        fetchNotifications();
+    }, [fetchNotifications]);
 
     // Realtime — รับ notification ใหม่ทันทีโดยไม่ต้อง refresh
     useEffect(() => {
@@ -59,10 +80,22 @@ export function useNotifications(userId: string | null) {
             }, (payload) => {
                 setNotifications(prev => [payload.new as Notification, ...prev]);
             })
+            .on('postgres_changes', {
+                event: 'DELETE',
+                schema: 'public',
+                table: 'notifications',
+                filter: `user_id=eq.${userId}`,
+            }, (payload) => {
+                // sync state ถ้ามีการลบจาก device อื่น
+                setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
+            })
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
     }, [userId]);
 
-    return { notifications, unreadCount: notifications.length, markAllRead };
+    // unreadCount นับเฉพาะที่ยังไม่ได้อ่าน
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+
+    return { notifications, unreadCount, markAllRead, deleteNotification };
 }

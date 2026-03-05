@@ -175,7 +175,7 @@ function WishCard({ event, leaving }: { event: WishEvent; leaving: boolean }) {
             position: "absolute",
             left: 24, top: 24,
             width: 280,
-            background: "rgba(12,8,6,0.88)",
+            background: "rgba(12, 8, 6, 1)",
             backdropFilter: "blur(20px)",
             WebkitBackdropFilter: "blur(20px)",
             borderRadius: 6,
@@ -292,7 +292,7 @@ export function WishOverlay() {
                 busyRef.current = false;
                 setTimeout(processNext, 200);
             }, 420);
-        }, 5000);
+        }, 20000);
     }, []);
 
     const enqueue = useCallback((evt: WishEvent) => {

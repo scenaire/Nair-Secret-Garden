@@ -5,7 +5,6 @@ import { useRef, useState, useCallback } from "react";
 import { JarSVG } from "./JarSVG";
 import { RibbonLabel } from "./RibbonLabel";
 import { NotifToast, type ToastItem } from "./NotifToast";
-import { PolaroidCard } from "./PolaroidCard";
 import { DaisySVG, TulipSVG, CosmosSVG, RoseSVG, LilySVG } from "./flowers/FlowerSVGs";
 import { useJarPhysics } from "./hooks/useJarPhysics";
 import { useGardenChannel } from "./hooks/useGardenChannel";
@@ -50,26 +49,6 @@ function playSparkle(phase: 1 | 2 | 3) {
             g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.02);
             g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
             o.start(t); o.stop(t + 0.7);
-        });
-    } catch (_) { }
-}
-
-function playPolaroidSound() {
-    try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate);
-        const d = buf.getChannelData(0);
-        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.01));
-        const src = ctx.createBufferSource(), g = ctx.createGain();
-        src.buffer = buf; g.gain.value = 0.12;
-        src.connect(g); g.connect(ctx.destination); src.start();
-        [1318.51, 1760].forEach((f, i) => {
-            const o = ctx.createOscillator(), gn = ctx.createGain();
-            o.connect(gn); gn.connect(ctx.destination); o.type = "sine"; o.frequency.value = f;
-            const t = ctx.currentTime + 0.05 + i * 0.12;
-            gn.gain.setValueAtTime(0, t); gn.gain.linearRampToValueAtTime(0.09, t + 0.02);
-            gn.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-            o.start(t); o.stop(t + 0.6);
         });
     } catch (_) { }
 }
@@ -175,7 +154,6 @@ export function TerrariumOverlay() {
     const [lastType, setLastType] = useState<"seed" | "bloom" | null>(null);
     const [lastUsername, setLastUsername] = useState<string | null>(null);
     const [toastQueue, setToastQueue] = useState<ToastItem[]>([]);
-    const [polaroid, setPolaroid] = useState<{ username: string; imageUrl?: string; rotation: number } | null>(null);
 
     const flowerIdxRef = useRef(0);
     const { spawnSeed, spawnSeedBatch, getSeedSurface } = useJarPhysics(ballLayerRef);
@@ -183,13 +161,11 @@ export function TerrariumOverlay() {
     // ── Initial load from DB ──────────────────────────────────────────────────
     useInitialLoad({
         onSeedsLoaded: async (seeds) => {
-            // Spawn all existing seeds as a batch (no sound, no notification)
             const styles = seeds.map(s => {
                 const theme = resolveTheme(s.themeKey);
                 return { bg: theme.bg, border: theme.border, glow: theme.glow };
             });
             await spawnSeedBatch(styles);
-            // Update glow to last seed's color
             if (styles.length > 0) setGlowRgb(styles[styles.length - 1].glow);
         },
         onFlowersLoaded: (initialFlowers) => {
@@ -227,29 +203,20 @@ export function TerrariumOverlay() {
     const handleBloomJob = useCallback((job: BloomJob, done: () => void) => {
         const ratio = totalCount / MAX_SEEDS;
         const phase = getPhase(ratio);
-        const rotation = -5 + Math.random() * 10;
 
-        setPolaroid({ username: job.username, imageUrl: job.imageUrl, rotation });
-        playPolaroidSound();
-
-        setTimeout(() => {
-            setPolaroid(null);
-            setTimeout(() => {
-                const surfaceY = getSeedSurface();
-                const flowerData = buildFlowerData(surfaceY, ratio, flowerIdxRef.current++);
-                setFlowers(f => [...f, { ...flowerData, id: `flower-${Date.now()}-${Math.random()}` }]);
-                setTotalCount(c => c + 1);
-                setLastType("bloom");
-                setLastUsername(job.username);
-                setToastQueue(q => [...q, {
-                    id: `${Date.now()}`, username: job.username,
-                    type: "bloom", dotColor: "#d4c870",
-                }]);
-                triggerWiggle(jarZoneRef.current, phase);
-                playSparkle(phase);
-                done();
-            }, 80);
-        }, 2500);
+        const surfaceY = getSeedSurface();
+        const flowerData = buildFlowerData(surfaceY, ratio, flowerIdxRef.current++);
+        setFlowers(f => [...f, { ...flowerData, id: `flower-${Date.now()}-${Math.random()}` }]);
+        setTotalCount(c => c + 1);
+        setLastType("bloom");
+        setLastUsername(job.username);
+        setToastQueue(q => [...q, {
+            id: `${Date.now()}`, username: job.username,
+            type: "bloom", dotColor: "#d4c870",
+        }]);
+        triggerWiggle(jarZoneRef.current, phase);
+        playSparkle(phase);
+        done();
     }, [totalCount, getSeedSurface]);
 
     const { enqueue: enqueueBloom } = useFlowerQueue(handleBloomJob);
@@ -278,14 +245,6 @@ export function TerrariumOverlay() {
                 @keyframes flowerSway {
                     from { transform:rotate(var(--sf)); }
                     to   { transform:rotate(var(--st)); }
-                }
-                @keyframes pIn {
-                    from { opacity:0; transform:translateY(24px) rotate(-4deg) scale(0.7); }
-                    to   { opacity:1; transform:translateY(0) rotate(var(--p-rot)) scale(1); }
-                }
-                @keyframes polShimmer {
-                    from { transform:translateX(-130%); }
-                    to   { transform:translateX(200%); }
                 }
                 @keyframes cardIn  { from{opacity:0;transform:translateX(-12px);}  to{opacity:1;transform:translateX(0);} }
                 @keyframes cardOut { from{opacity:1;transform:translateX(0);} to{opacity:0;transform:translateX(-10px) scaleY(0.88);} }
@@ -321,20 +280,6 @@ export function TerrariumOverlay() {
                         transition: "opacity 1.8s ease, width 1.8s ease, height 1.8s ease, background 2s ease",
                         ...glowStyle,
                     }} />
-
-                    {/* Polaroid */}
-                    {polaroid && (
-                        <div style={{
-                            position: "absolute", left: "50%", top: "50%",
-                            transform: "translate(-50%, -58%)", zIndex: 50, pointerEvents: "none",
-                        }}>
-                            <PolaroidCard
-                                username={polaroid.username}
-                                imageUrl={polaroid.imageUrl}
-                                rotation={polaroid.rotation}
-                            />
-                        </div>
-                    )}
 
                     {/* Jar SVG frame on top */}
                     <JarSVG shimmerOpacity={shimmerOp} />

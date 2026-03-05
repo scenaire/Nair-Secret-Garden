@@ -51,7 +51,7 @@ export function NotifToast({ queue, onDone }: NotifToastProps) {
         }}>
             <div style={{
                 width: "100%",
-                background: "rgba(14,9,5,0.78)",
+                background: "rgba(14, 9, 5, 0.78)",
                 backdropFilter: "blur(14px)",
                 WebkitBackdropFilter: "blur(14px)",
                 border: "1px solid rgba(190,150,90,0.28)",

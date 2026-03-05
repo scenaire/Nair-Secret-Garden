@@ -18,7 +18,6 @@ interface WishPanelProps {
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
-// presets filtered to not exceed remaining/target
 function getPresets(max: number): number[] {
     return [50, 100, 200, 500].filter(p => p < max);
 }
@@ -32,8 +31,6 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
     const [status, setStatus] = useState<FormStatus>("idle");
     const [errorMsg, setErrorMsg] = useState("");
     const slipRef = useRef<HTMLInputElement>(null);
-    const [slipMode, setSlipMode] = useState<"file" | "url">("file");
-    const [slipUrl, setSlipUrl] = useState("");
 
     const pct = Math.min((item.approved_total / item.target_amount) * 100, 100);
     const pendingPct = Math.min(
@@ -41,14 +38,12 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
     ) - pct;
     const remaining = Math.max(item.target_amount - item.approved_total, 0);
 
-    // close on Escape
     useEffect(() => {
         const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
         window.addEventListener("keydown", h);
         return () => window.removeEventListener("keydown", h);
     }, [onClose]);
 
-    // fetch contributions
     useEffect(() => {
         fetchContributions(item.id).then(setContributions).catch(console.error);
     }, [item.id]);
@@ -57,8 +52,7 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
 
     const handleSubmit = useCallback(async () => {
         if (!isLoggedIn || !rawUser) return;
-        const hasSlip = slipMode === "file" ? !!slipFile : !!slipUrl.trim();
-        if (!hasSlip) { setErrorMsg("Please attach your transfer slip or enter a URL."); return; }
+        if (!slipFile) { setErrorMsg("Please attach your transfer slip."); return; }
         if (!effectiveAmount || effectiveAmount <= 0) { setErrorMsg("Please enter a valid amount."); return; }
 
         setStatus("submitting");
@@ -67,8 +61,7 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
             await submitContribution({
                 wishItemId: item.id,
                 amount: effectiveAmount,
-                slipFile: slipMode === "file" ? slipFile! : undefined,
-                slipUrl: slipMode === "url" ? slipUrl.trim() : undefined,
+                slipFile,
                 userId: rawUser.id,
                 twitchName: user?.name ?? "anonymous",
                 avatarUrl: user?.avatar,
@@ -82,7 +75,7 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
             setErrorMsg("Submission failed. Please try again.");
             setStatus("error");
         }
-    }, [isLoggedIn, rawUser, user, slipFile, slipUrl, slipMode, effectiveAmount, item.id, item.target_amount, onContributed]);
+    }, [isLoggedIn, rawUser, user, slipFile, effectiveAmount, item.id, item.target_amount, item.title, onContributed]);
 
     return (
         <AnimatePresence>
@@ -247,7 +240,6 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
                                             ① เลือกจำนวนที่ต้องการสมทบ
                                         </p>
                                         <div className="flex gap-2 flex-wrap">
-                                            {/* preset buttons — filtered to not exceed remaining */}
                                             {getPresets(remaining).map((p) => (
                                                 <button
                                                     key={p}
@@ -263,7 +255,6 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
                                                     ฿{p}
                                                 </button>
                                             ))}
-                                            {/* remaining button */}
                                             <button
                                                 onClick={() => { setAmount(remaining); setCustomAmount(String(remaining)); }}
                                                 style={{
@@ -276,7 +267,6 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
                                             >
                                                 ฿{remaining} ทั้งหมด
                                             </button>
-                                            {/* custom input */}
                                             <input
                                                 type="number"
                                                 value={customAmount}
@@ -325,61 +315,27 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
                                         <p style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "#4A6B45", opacity: 0.55 }}>
                                             {item.mode === "crowdfund" ? "③ แนบสลิปยืนยัน" : "② แนบสลิปยืนยัน"}
                                         </p>
-                                        {/* mode tabs */}
-                                        <div className="flex" style={{ marginBottom: 6 }}>
-                                            {(["file", "url"] as const).map((m) => (
-                                                <button key={m} onClick={() => { setSlipMode(m); setErrorMsg(""); }}
-                                                    style={{
-                                                        flex: 1, padding: "5px 0", fontSize: 10, cursor: "pointer",
-                                                        border: "1px solid rgba(143,175,138,0.3)",
-                                                        borderLeft: m === "url" ? "none" : undefined,
-                                                        borderRadius: m === "file" ? "6px 0 0 6px" : "0 6px 6px 0",
-                                                        background: slipMode === m ? "rgba(143,175,138,0.16)" : "rgba(200,222,197,0.04)",
-                                                        color: slipMode === m ? "#4A6B45" : "#C9A98D",
-                                                        fontWeight: slipMode === m ? 500 : 400,
-                                                        transition: "all 0.15s",
-                                                    }}
-                                                >
-                                                    {m === "file" ? "อัปโหลดไฟล์" : "ใส่ URL"}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        {slipMode === "file" ? (
-                                            <div
-                                                className="flex items-center gap-2 cursor-pointer"
-                                                style={{
-                                                    padding: "9px 12px",
-                                                    border: `1.5px dashed ${slipFile ? "rgba(143,175,138,0.6)" : "rgba(143,175,138,0.35)"}`,
-                                                    borderRadius: 8,
-                                                    background: slipFile ? "rgba(143,175,138,0.08)" : "rgba(200,222,197,0.05)",
-                                                }}
-                                                onClick={() => slipRef.current?.click()}
-                                            >
-                                                <Paperclip size={13} style={{ color: "#8FAF8A", flexShrink: 0 }} />
-                                                <span style={{ fontSize: 12, color: "#C9A98D", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
-                                                    {slipFile ? slipFile.name : "แนบสลิปที่นี่"}
-                                                </span>
-                                                <span style={{ fontSize: 10, color: "#C9A98D", opacity: 0.5, flexShrink: 0 }}>PNG · JPG</span>
-                                                <input
-                                                    ref={slipRef} type="file" accept="image/*" className="hidden"
-                                                    onChange={(e) => { const f = e.target.files?.[0]; if (f) { setSlipFile(f); setErrorMsg(""); } }}
-                                                />
-                                            </div>
-                                        ) : (
+
+                                        <div
+                                            className="flex items-center gap-2 cursor-pointer"
+                                            style={{
+                                                padding: "9px 12px",
+                                                border: `1.5px dashed ${slipFile ? "rgba(143,175,138,0.6)" : "rgba(143,175,138,0.35)"}`,
+                                                borderRadius: 8,
+                                                background: slipFile ? "rgba(143,175,138,0.08)" : "rgba(200,222,197,0.05)",
+                                            }}
+                                            onClick={() => slipRef.current?.click()}
+                                        >
+                                            <Paperclip size={13} style={{ color: "#8FAF8A", flexShrink: 0 }} />
+                                            <span style={{ fontSize: 12, color: "#C9A98D", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                                                {slipFile ? slipFile.name : "แนบสลิปที่นี่"}
+                                            </span>
+                                            <span style={{ fontSize: 10, color: "#C9A98D", opacity: 0.5, flexShrink: 0 }}>PNG · JPG</span>
                                             <input
-                                                type="url" value={slipUrl}
-                                                onChange={(e) => { setSlipUrl(e.target.value); setErrorMsg(""); }}
-                                                placeholder="แนบสลิปที่นี่ https://…"
-                                                style={{
-                                                    width: "100%", padding: "9px 12px", fontSize: 12, color: "#6B4C35",
-                                                    border: `1px solid ${slipUrl ? "rgba(143,175,138,0.5)" : "rgba(143,175,138,0.25)"}`,
-                                                    borderRadius: 8, background: "rgba(255,255,255,0.7)", outline: "none",
-                                                    fontFamily: "var(--font-noto-sans-thai), sans-serif",
-                                                }}
-                                                onFocus={(e) => e.target.style.borderColor = "#8FAF8A"}
-                                                onBlur={(e) => e.target.style.borderColor = slipUrl ? "rgba(143,175,138,0.5)" : "rgba(143,175,138,0.25)"}
+                                                ref={slipRef} type="file" accept="image/*" className="hidden"
+                                                onChange={(e) => { const f = e.target.files?.[0]; if (f) { setSlipFile(f); setErrorMsg(""); } }}
                                             />
-                                        )}
+                                        </div>
 
                                         {errorMsg && (
                                             <p className="flex items-center gap-1" style={{ fontSize: 11, color: "#E87A9A" }}>
@@ -390,25 +346,22 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
                                         {/* submit buttons */}
                                         {item.mode === "crowdfund" ? (
                                             <div className="flex flex-col gap-1.5">
-                                                {/* single dynamic button */}
                                                 {(() => {
                                                     const isFull = effectiveAmount >= remaining;
                                                     return (
                                                         <motion.button
                                                             onClick={handleSubmit}
-                                                            disabled={status === "submitting" || (slipMode === "file" ? !slipFile : !slipUrl.trim()) || effectiveAmount <= 0}
+                                                            disabled={status === "submitting" || !slipFile || effectiveAmount <= 0}
                                                             whileHover={{ scale: 1.02, boxShadow: isFull ? "0 4px 14px rgba(74,107,69,0.28)" : undefined }}
                                                             whileTap={{ scale: 0.97 }}
                                                             className="flex items-center justify-center gap-1.5 w-full"
                                                             style={{
                                                                 padding: "9px 16px", borderRadius: 8, cursor: "pointer",
                                                                 border: isFull ? "none" : "1.5px solid rgba(143,175,138,0.4)",
-                                                                background: isFull
-                                                                    ? "linear-gradient(135deg, #4A6B45, #8FAF8A)"
-                                                                    : "transparent",
+                                                                background: isFull ? "linear-gradient(135deg, #4A6B45, #8FAF8A)" : "transparent",
                                                                 color: isFull ? "white" : "#4A6B45",
                                                                 fontSize: 13, fontWeight: isFull ? 500 : 400,
-                                                                opacity: ((slipMode === "file" ? !slipFile : !slipUrl.trim()) || effectiveAmount <= 0) ? 0.45 : 1,
+                                                                opacity: (!slipFile || effectiveAmount <= 0) ? 0.45 : 1,
                                                                 transition: "all 0.2s",
                                                             }}
                                                         >
@@ -423,10 +376,9 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
                                                 })()}
                                             </div>
                                         ) : (
-                                            /* buy now — single button */
                                             <motion.button
                                                 onClick={handleSubmit}
-                                                disabled={status === "submitting" || (slipMode === "file" ? !slipFile : !slipUrl.trim())}
+                                                disabled={status === "submitting" || !slipFile}
                                                 whileHover={{ scale: 1.02, boxShadow: "0 4px 14px rgba(74,107,69,0.28)" }}
                                                 whileTap={{ scale: 0.97 }}
                                                 className="flex items-center justify-center gap-1.5 w-full"
@@ -434,7 +386,7 @@ export function WishPanel({ item, onClose, onContributed }: WishPanelProps) {
                                                     padding: "10px 16px", borderRadius: 8, border: "none",
                                                     background: "linear-gradient(135deg, #4A6B45, #8FAF8A)",
                                                     color: "white", fontSize: 13, cursor: "pointer", fontWeight: 500,
-                                                    opacity: (slipMode === "file" ? !slipFile : !slipUrl.trim()) ? 0.45 : 1,
+                                                    opacity: !slipFile ? 0.45 : 1,
                                                 }}
                                             >
                                                 {status === "submitting"

@@ -47,12 +47,7 @@ export interface LeaderboardEntry {
 }
 
 // ── Image compression (Canvas API) ──────────────────────────
-// slip: max 1200px, WebP 0.82 — ลดขนาดก่อนอัปโหลด
-async function compressImage(
-    file: File,
-    maxDim = 1200,
-    quality = 0.82,
-): Promise<Blob> {
+async function compressImage(file: File, maxDim = 1200, quality = 0.82): Promise<Blob> {
     return new Promise((resolve, reject) => {
         const img = new Image();
         const url = URL.createObjectURL(file);
@@ -77,7 +72,6 @@ async function compressImage(
 // ── Upload slip to storage ────────────────────────────────────
 async function uploadSlip(file: File, userId: string): Promise<string> {
     const supabase = createClient();
-    // compress: max 1200px, WebP 0.82
     const compressed = await compressImage(file, 1200, 0.82);
     const path = `${userId}/${crypto.randomUUID()}.webp`;
     const { error } = await supabase.storage
@@ -90,15 +84,10 @@ async function uploadSlip(file: File, userId: string): Promise<string> {
 // ── Fetch all wish items with totals ─────────────────────────
 export async function fetchWishItems(): Promise<WishItem[]> {
     const supabase = createClient();
-
     const [itemsRes, totalsRes] = await Promise.all([
-        supabase
-            .from("wish_items")
-            .select("*")
-            .order("sort_order", { ascending: true }),
+        supabase.from("wish_items").select("*").order("sort_order", { ascending: true }),
         supabase.rpc("get_wish_item_totals"),
     ]);
-
     if (itemsRes.error) throw itemsRes.error;
     if (totalsRes.error) throw totalsRes.error;
 
@@ -132,7 +121,6 @@ export async function fetchContributions(wishItemId: string): Promise<WishContri
 
 // ── Fetch current user's own pending contributions ────────────
 export async function fetchMyPending(userId: string): Promise<string[]> {
-    // returns list of wish_item_ids where user has a pending slip
     const supabase = createClient();
     const { data, error } = await supabase
         .from("wish_contributions")
@@ -143,30 +131,21 @@ export async function fetchMyPending(userId: string): Promise<string[]> {
     return (data ?? []).map((r: any) => r.wish_item_id);
 }
 
-// ── Submit a contribution (drop a coin / make it real) ────────
+// ── Submit a contribution ─────────────────────────────────────
 export async function submitContribution({
-    wishItemId, amount, slipFile, slipUrl, userId, twitchName, avatarUrl,
+    wishItemId, amount, slipFile, userId, twitchName, avatarUrl,
     wishTitle, targetAmount,
 }: {
     wishItemId: string;
     amount: number;
-    slipFile?: File;        // provide slipFile OR slipUrl
-    slipUrl?: string;
+    slipFile: File;
     userId: string;
     twitchName: string;
     avatarUrl?: string;
     wishTitle?: string;
     targetAmount?: number;
 }): Promise<void> {
-    if (!slipFile && !slipUrl) throw new Error("slipFile or slipUrl required");
-
-    let resolvedSlipPath: string;
-    if (slipFile) {
-        resolvedSlipPath = await uploadSlip(slipFile, userId);
-    } else {
-        // store URL directly — no upload needed
-        resolvedSlipPath = slipUrl!;
-    }
+    const resolvedSlipPath = await uploadSlip(slipFile, userId);
 
     const supabase = createClient();
     const { error } = await supabase.from("wish_contributions").insert({
@@ -179,34 +158,26 @@ export async function submitContribution({
         status: "pending",
     });
     if (error) {
-        // rollback uploaded file only (not URL)
-        if (slipFile) await supabase.storage.from(SLIP_BUCKET).remove([resolvedSlipPath]);
+        await supabase.storage.from(SLIP_BUCKET).remove([resolvedSlipPath]);
         throw error;
     }
+
 }
 
 // ── Submit a surprise gift ────────────────────────────────────
 export async function submitSurprise({
-    itemName, productLink, amount, message, slipFile, slipUrl, userId, twitchName, avatarUrl,
+    itemName, productLink, amount, message, slipFile, userId, twitchName, avatarUrl,
 }: {
     itemName: string;
     productLink?: string;
     amount?: number;
     message?: string;
-    slipFile?: File;        // provide slipFile OR slipUrl
-    slipUrl?: string;
+    slipFile: File;
     userId: string;
     twitchName: string;
     avatarUrl?: string;
 }): Promise<void> {
-    if (!slipFile && !slipUrl) throw new Error("slipFile or slipUrl required");
-
-    let resolvedSlipPath: string;
-    if (slipFile) {
-        resolvedSlipPath = await uploadSlip(slipFile, userId);
-    } else {
-        resolvedSlipPath = slipUrl!;
-    }
+    const resolvedSlipPath = await uploadSlip(slipFile, userId);
 
     const supabase = createClient();
     const { error } = await supabase.from("wish_surprises").insert({
@@ -221,9 +192,10 @@ export async function submitSurprise({
         status: "pending",
     });
     if (error) {
-        if (slipFile) await supabase.storage.from(SLIP_BUCKET).remove([resolvedSlipPath]);
+        await supabase.storage.from(SLIP_BUCKET).remove([resolvedSlipPath]);
         throw error;
     }
+
 }
 
 // ── Fetch leaderboard ─────────────────────────────────────────

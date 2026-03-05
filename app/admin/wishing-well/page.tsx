@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     CheckCircle2, XCircle, Clock, Eye, Trash2, Plus,
@@ -32,6 +33,47 @@ const labelCls: React.CSSProperties = {
     fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase" as const,
     color: "#4A6B45", opacity: 0.6, marginBottom: 3, display: "block",
 };
+
+
+// ── Admin chime ───────────────────────────────────────────────
+function playAdminChime() {
+    try {
+        const ctx = new ((window as any).AudioContext || (window as any).webkitAudioContext)();
+        const notes = [523.25, 659.25, 783.99]; // C5 E5 G5 — bright alert
+        notes.forEach((f, i) => {
+            const o = ctx.createOscillator(), g = ctx.createGain();
+            o.connect(g); g.connect(ctx.destination);
+            o.type = "sine"; o.frequency.value = f;
+            const t = ctx.currentTime + i * 0.1;
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.09, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+            o.start(t); o.stop(t + 0.6);
+        });
+    } catch (_) { }
+}
+
+// ── Realtime hook for new pending slips ───────────────────────
+function useRealtimeSlips(isAdmin: boolean | null, onNew: () => void) {
+    useEffect(() => {
+        if (!isAdmin) return;
+        const supabase = createClient();
+        const channel = supabase
+            .channel("admin-slip-watch")
+            .on("postgres_changes", {
+                event: "INSERT",
+                schema: "public",
+                table: "wish_contributions",
+            }, () => { playAdminChime(); onNew(); })
+            .on("postgres_changes", {
+                event: "INSERT",
+                schema: "public",
+                table: "wish_surprises",
+            }, () => { playAdminChime(); onNew(); })
+            .subscribe();
+        return () => { supabase.removeChannel(channel); };
+    }, [isAdmin, onNew]);
+}
 
 // ────────────────────────────────────────────────────────────
 export default function AdminWishingWellPage() {
@@ -76,6 +118,8 @@ export default function AdminWishingWellPage() {
                 .then(({ data }) => setIsAdmin(!!data));
         });
     }, []);
+
+    useRealtimeSlips(isAdmin, load);
 
     useEffect(() => { if (isAdmin) load(); }, [isAdmin, load]);
     useEffect(() => { if (isAdmin && tab === "history") loadHistory(); }, [isAdmin, tab, loadHistory]);
@@ -173,7 +217,7 @@ function QueueTab({ rows, onRefresh }: { rows: PendingContribution[]; onRefresh:
     const loadSlip = useCallback(async (id: string, path: string) => {
         if (slipUrls[id]) return;
         try {
-            const url = await getSlipSignedUrl(path);
+            const url = path.startsWith("http") ? path : await getSlipSignedUrl(path);
             setSlipUrls(prev => ({ ...prev, [id]: url }));
         } catch (e) { console.error(e); }
     }, [slipUrls]);
@@ -304,8 +348,10 @@ function SurprisesTab({ rows, onRefresh }: { rows: PendingSurprise[]; onRefresh:
 
     const loadSlip = async (id: string, path: string) => {
         if (slipUrls[id]) return;
-        try { const url = await getSlipSignedUrl(path); setSlipUrls(p => ({ ...p, [id]: url })); }
-        catch (e) { console.error(e); }
+        try {
+            const url = path.startsWith("http") ? path : await getSlipSignedUrl(path);
+            setSlipUrls(p => ({ ...p, [id]: url }));
+        } catch (e) { console.error(e); }
     };
 
     const handleApprove = async (id: string) => {

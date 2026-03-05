@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { broadcastGardenEvent } from "@/lib/gardenBroadcast";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -115,17 +116,29 @@ export async function approveContribution(id: string): Promise<void> {
         .from('wish_contributions')
         .update({ status: 'approved', approved_at: new Date().toISOString() })
         .eq('id', id)
-        .select('user_id, amount, wish_items(title)')
+        .select('user_id, twitch_name, avatar_url, amount, wish_items(title, target_amount)')
         .single();
     if (error) throw error;
 
     const title = (data as any).wish_items?.title ?? 'ของขวัญ';
+    const targetAmount = (data as any).wish_items?.target_amount;
+
     await createNotification(supabase, {
         userId: data.user_id,
         type: 'wishlist_approved',
         title,
         message: `สลิปของคุณสำหรับ "${title}" ได้รับการยืนยันแล้ว ✦`,
     });
+
+    // 🔔 broadcast ไปหน้า overlay หลัง approve
+    broadcastGardenEvent({
+        type: "wish_contribution",
+        username: data.twitch_name,
+        avatarUrl: data.avatar_url ?? undefined,
+        amount: data.amount,
+        wishTitle: title,
+        targetAmount,
+    }).catch(() => { });
 }
 
 // ── Reject contribution ───────────────────────────────────────
@@ -167,9 +180,9 @@ export async function approveSurprise(id: string): Promise<void> {
     const supabase = createClient();
     const { data, error } = await supabase
         .from('wish_surprises')
-        .update({ status: 'approved', approved_at: new Date().toISOString() })
+        .update({ status: 'approved' })
         .eq('id', id)
-        .select('user_id, item_name')
+        .select('user_id, twitch_name, avatar_url, item_name, amount, message')
         .single();
     if (error) throw error;
 
@@ -179,6 +192,16 @@ export async function approveSurprise(id: string): Promise<void> {
         title: data.item_name ?? 'Surprise Gift',
         message: `ของขวัญเซอร์ไพรส์ "${data.item_name}" ของคุณได้รับการยืนยันแล้ว 🎁`,
     });
+
+    // 🔔 broadcast ไปหน้า overlay หลัง approve
+    broadcastGardenEvent({
+        type: "wish_surprise",
+        username: data.twitch_name,
+        avatarUrl: data.avatar_url ?? undefined,
+        amount: data.amount ?? undefined,
+        itemName: data.item_name,
+        message: data.message ?? undefined,
+    }).catch(() => { });
 }
 
 export async function rejectSurprise(id: string, reason?: string): Promise<void> {
