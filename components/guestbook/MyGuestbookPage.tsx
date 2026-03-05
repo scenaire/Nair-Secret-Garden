@@ -66,11 +66,13 @@ export function MyGuestbookPage({ data, onEdit }: { data: any, onEdit: () => voi
                             const x = sticker.x_position ?? sticker.xPercent ?? 0;
                             const y = sticker.y_position ?? sticker.yPercent ?? 0;
                             const scale = sticker.scale ?? sticker.widthPercent ?? 25;
-                            const type = sticker.sticker_type ?? sticker.content;
                             const rot = sticker.rotation ?? 0;
-                            const isImage = typeof type === 'string' && (type.includes('/') || type.startsWith('data:'));
 
-                            // ✨ คำนวณ widthPx จาก canvasWidth ที่เซฟไว้ เพื่อให้ขนาดตรงกับ editor
+                            // เช็คจาก type field แทน
+                            const isImage = sticker.type === 'image' || sticker.content_type === 'image';
+                            const displayContent = sticker.content ?? sticker.sticker_type;
+                            const imageSrc = sticker.src;
+
                             const resolvedCanvasWidth = canvasWidth || 700;
                             const widthPx = resolvedCanvasWidth * (scale / 100);
 
@@ -87,17 +89,16 @@ export function MyGuestbookPage({ data, onEdit }: { data: any, onEdit: () => voi
                                         zIndex: 10,
                                     }}
                                 >
-                                    {isImage ? (
+                                    {isImage && imageSrc ? (
                                         <img
-                                            src={type}
-                                            alt="sticker"
-                                            className="w-full h-auto"
+                                            src={imageSrc}
+                                            alt={displayContent}
+                                            className="w-full h-full object-contain"
                                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                         />
                                     ) : (
-                                        // ✨ ใช้ font-size เป็น pixel เหมือนใน StickerCanvas
                                         <span style={{ fontSize: `${widthPx * 0.8}px`, lineHeight: 1 }} className="select-none">
-                                            {type}
+                                            {displayContent}
                                         </span>
                                     )}
                                 </div>

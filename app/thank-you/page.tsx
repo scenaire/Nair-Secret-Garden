@@ -33,7 +33,8 @@ export default function ThankYouPage() {
     const [envelopes, setEnvelopes] = useState<any[]>([]);
 
     // ✨ ดึง State จาก Auth Hook สำหรับ Navbar
-    const { isLoggedIn, user, loginWithTwitch, logout } = useAuth();
+    const { isLoggedIn, user, rawUser, loginWithTwitch, logout } = useAuth();
+
 
     useEffect(() => {
         const generatedEnvelopes = Array.from({ length: 30 }).map((_, i) => {
@@ -64,7 +65,7 @@ export default function ThankYouPage() {
         <div className="min-h-screen flex flex-col bg-[#FDF6F5]">
 
             {/* 🌟 แทรก Navbar ตรงนี้ */}
-            <Navbar isLoggedIn={isLoggedIn} user={user} onLogin={loginWithTwitch} onLogout={logout} />
+            <Navbar isLoggedIn={isLoggedIn} user={user} userId={rawUser?.id} onLogin={loginWithTwitch} onLogout={logout} />
 
             {/* 💌 โซนหลัก (ผ้าปูโต๊ะ Plaid และการ์ดขอบคุณ) */}
             <main

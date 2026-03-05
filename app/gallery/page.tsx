@@ -43,7 +43,8 @@ export default function GalleryPage() {
 
     return (
         <main className="min-h-screen flex flex-col" style={{ backgroundColor: "#FDFBF4" }}>
-            <Navbar isLoggedIn={isLoggedIn} user={uiUser} onLogin={loginWithTwitch} onLogout={logout} />
+            <Navbar isLoggedIn={isLoggedIn} user={uiUser} userId={rawUser?.id} onLogin={loginWithTwitch} onLogout={logout} />
+
 
             <div className="flex flex-1" style={{ paddingTop: 48 }}>
 

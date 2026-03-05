@@ -269,12 +269,8 @@ export default function CanvasPage() {
                 </motion.div>
             ))}
 
-            <Navbar
-                isLoggedIn={isLoggedIn}
-                user={uiUser}
-                onLogin={loginWithTwitch}
-                onLogout={logout}
-            />
+            <Navbar isLoggedIn={isLoggedIn} user={uiUser} userId={rawUser?.id} onLogin={loginWithTwitch} onLogout={logout} />
+
 
             <div className="flex flex-1 overflow-hidden pt-14">
                 {!isLoggedIn ? (

@@ -60,7 +60,8 @@ export default function WishingWellPage() {
 
     return (
         <main className="min-h-screen flex flex-col" style={{ backgroundColor: "#FDFBF4" }}>
-            <Navbar isLoggedIn={isLoggedIn} user={uiUser} onLogin={loginWithTwitch} onLogout={logout} />
+            <Navbar isLoggedIn={isLoggedIn} user={uiUser} userId={rawUser?.id} onLogin={loginWithTwitch} onLogout={logout} />
+
 
             <div className="relative z-10" style={{ paddingTop: 48 }}>
                 <div style={{ margin: "0 16px 16px", borderRadius: "0 0 12px 12px", background: "rgba(253,251,244,0.88)", boxShadow: "0 2px 24px rgba(74,107,69,0.09)", paddingBottom: 80 }}>

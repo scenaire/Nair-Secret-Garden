@@ -37,6 +37,8 @@ export function useAdminEntries() {
                     stickersByEntry[s.entry_id].push({
                         id: s.id,
                         content: s.sticker_type,
+                        type: s.content_type ?? 'emoji',
+                        src: s.src ?? undefined,
                         xPercent: s.x_position,
                         yPercent: s.y_position,
                         widthPercent: s.scale || 25,

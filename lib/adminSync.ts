@@ -1,4 +1,3 @@
-// lib/adminSync.ts
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
@@ -54,7 +53,7 @@ export async function getSlipSignedUrl(slipPath: string): Promise<string> {
     const supabase = createClient();
     const { data, error } = await supabase.storage
         .from("wish-slips")
-        .createSignedUrl(slipPath, 60 * 10); // 10 min
+        .createSignedUrl(slipPath, 60 * 10);
     if (error) throw error;
     return data.signedUrl;
 }
@@ -64,10 +63,7 @@ export async function fetchPendingContributions(): Promise<PendingContribution[]
     const supabase = createClient();
     const { data, error } = await supabase
         .from("wish_contributions")
-        .select(`
-            *,
-            wish_items ( title )
-        `)
+        .select(`*, wish_items ( title )`)
         .eq("status", "pending")
         .order("created_at", { ascending: true });
     if (error) throw error;
@@ -92,24 +88,65 @@ export async function fetchAllContributions(): Promise<PendingContribution[]> {
     }));
 }
 
+// ── Notification helper ───────────────────────────────────────
+async function createNotification(supabase: any, {
+    userId, type, title, message, rejectReason,
+}: {
+    userId: string;
+    type: 'wishlist_approved' | 'wishlist_rejected' | 'surprise_approved' | 'surprise_rejected';
+    title: string;
+    message: string;
+    rejectReason?: string;
+}) {
+    await supabase.from('notifications').insert({
+        user_id: userId,
+        type,
+        title,
+        message,
+        reject_reason: rejectReason ?? null,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+}
+
 // ── Approve contribution ──────────────────────────────────────
 export async function approveContribution(id: string): Promise<void> {
     const supabase = createClient();
-    const { error } = await supabase
-        .from("wish_contributions")
-        .update({ status: "approved", approved_at: new Date().toISOString() })
-        .eq("id", id);
+    const { data, error } = await supabase
+        .from('wish_contributions')
+        .update({ status: 'approved', approved_at: new Date().toISOString() })
+        .eq('id', id)
+        .select('user_id, amount, wish_items(title)')
+        .single();
     if (error) throw error;
+
+    const title = (data as any).wish_items?.title ?? 'ของขวัญ';
+    await createNotification(supabase, {
+        userId: data.user_id,
+        type: 'wishlist_approved',
+        title,
+        message: `สลิปของคุณสำหรับ "${title}" ได้รับการยืนยันแล้ว ✦`,
+    });
 }
 
 // ── Reject contribution ───────────────────────────────────────
-export async function rejectContribution(id: string, reason: string): Promise<void> {
+export async function rejectContribution(id: string, reason?: string): Promise<void> {
     const supabase = createClient();
-    const { error } = await supabase
-        .from("wish_contributions")
-        .update({ status: "rejected", reject_reason: reason })
-        .eq("id", id);
+    const { data, error } = await supabase
+        .from('wish_contributions')
+        .update({ status: 'rejected', reject_reason: reason ?? null })
+        .eq('id', id)
+        .select('user_id, wish_items(title)')
+        .single();
     if (error) throw error;
+
+    const title = (data as any).wish_items?.title ?? 'ของขวัญ';
+    await createNotification(supabase, {
+        userId: data.user_id,
+        type: 'wishlist_rejected',
+        title,
+        message: `สลิปสำหรับ "${title}" ถูกปฏิเสธ`,
+        rejectReason: reason,
+    });
 }
 
 // ── Fetch all surprises ───────────────────────────────────────
@@ -128,20 +165,39 @@ export async function fetchSurprises(statusFilter?: "pending" | "approved" | "re
 // ── Approve / reject surprise ─────────────────────────────────
 export async function approveSurprise(id: string): Promise<void> {
     const supabase = createClient();
-    const { error } = await supabase
-        .from("wish_surprises")
-        .update({ status: "approved" })
-        .eq("id", id);
+    const { data, error } = await supabase
+        .from('wish_surprises')
+        .update({ status: 'approved', approved_at: new Date().toISOString() })
+        .eq('id', id)
+        .select('user_id, item_name')
+        .single();
     if (error) throw error;
+
+    await createNotification(supabase, {
+        userId: data.user_id,
+        type: 'surprise_approved',
+        title: data.item_name ?? 'Surprise Gift',
+        message: `ของขวัญเซอร์ไพรส์ "${data.item_name}" ของคุณได้รับการยืนยันแล้ว 🎁`,
+    });
 }
 
-export async function rejectSurprise(id: string, reason: string): Promise<void> {
+export async function rejectSurprise(id: string, reason?: string): Promise<void> {
     const supabase = createClient();
-    const { error } = await supabase
-        .from("wish_surprises")
-        .update({ status: "rejected", reject_reason: reason })
-        .eq("id", id);
+    const { data, error } = await supabase
+        .from('wish_surprises')
+        .update({ status: 'rejected', reject_reason: reason ?? null })
+        .eq('id', id)
+        .select('user_id, item_name')
+        .single();
     if (error) throw error;
+
+    await createNotification(supabase, {
+        userId: data.user_id,
+        type: 'surprise_rejected',
+        title: data.item_name ?? 'Surprise Gift',
+        message: `ของขวัญเซอร์ไพรส์ "${data.item_name}" ถูกปฏิเสธ`,
+        rejectReason: reason,
+    });
 }
 
 // ── Wish item CRUD ────────────────────────────────────────────
@@ -179,13 +235,8 @@ export async function deleteWishItem(id: string): Promise<void> {
     if (error) throw error;
 }
 
-// ── Upload wish item image to storage ─────────────────────────
 // ── Image compression (shared helper) ────────────────────────
-async function compressImage(
-    file: File,
-    maxDim = 1200,
-    quality = 0.85,
-): Promise<Blob> {
+async function compressImage(file: File, maxDim = 1200, quality = 0.85): Promise<Blob> {
     return new Promise((resolve, reject) => {
         const img = new Image();
         const url = URL.createObjectURL(file);
@@ -208,7 +259,6 @@ async function compressImage(
 }
 
 // ── Upload wish item image (public bucket) ────────────────────
-// รูปสินค้า: max 1200px, WebP 0.85 — คมชัดพอสำหรับ product card
 export async function uploadWishImage(file: File): Promise<string> {
     const supabase = createClient();
     const compressed = await compressImage(file, 1200, 0.85);

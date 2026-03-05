@@ -20,7 +20,8 @@ import { MyGuestbookPage } from "@/components/guestbook/MyGuestbookPage";
 import { THEMES, ThemeKey, GUESTBOOK_QUESTIONS } from "@/components/guestbook/editor/constants";
 
 export default function GuestbookPage() {
-    const { isLoggedIn, user, loginWithTwitch, logout } = useAuth();
+    const { isLoggedIn, user, rawUser, loginWithTwitch, logout } = useAuth();
+
 
     // ✨ 2. ดึง hasEntry กับ savedData ออกมาจาก Hook ด้วยค่ะ
     const { isFetchingDB, hasEntry, savedData, error, retry } = useLoadEntry();
@@ -113,7 +114,8 @@ export default function GuestbookPage() {
                 backgroundBlendMode: "normal"
             }}
         >
-            <Navbar isLoggedIn={isLoggedIn} user={user} onLogin={loginWithTwitch} onLogout={logout} />
+            <Navbar isLoggedIn={isLoggedIn} user={user} userId={rawUser?.id} onLogin={loginWithTwitch} onLogout={logout} />
+
 
             <div className="absolute top-20 left-10 text-black/5 animate-pulse"><Sparkles size={40} strokeWidth={1} /></div>
             <div className="absolute bottom-20 right-20 text-black/5 animate-bounce"><Sparkles size={30} strokeWidth={1} /></div>
