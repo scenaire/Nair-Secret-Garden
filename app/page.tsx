@@ -10,6 +10,7 @@ import { GardenMap } from "@/components/landing/GardenMap";
 import { LoginCallout } from "@/components/landing/LoginCallout";
 import { usePetalNavigation } from "@/hooks/usePetalNavigation";
 import { useAuth } from "@/hooks/useAuth";
+import { SakuraHeroLazy } from "@/components/landing/SakuraHeroLazy";
 
 export default function LandingPage() {
   const { user, isLoggedIn, loginWithTwitch, logout } = useAuth();
@@ -72,7 +73,9 @@ export default function LandingPage() {
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-16 gap-7">
-        <PolaroidHero />
+        <div className="relative w-full max-w-4xl">
+          <PolaroidHero />
+        </div>
 
         <AnimatePresence mode="wait">
           {!isLoggedIn ? (

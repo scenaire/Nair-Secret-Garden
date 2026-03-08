@@ -10,6 +10,7 @@ import { useJarPhysics } from "./hooks/useJarPhysics";
 import { useGardenChannel } from "./hooks/useGardenChannel";
 import { useFlowerQueue, type BloomJob } from "./hooks/useFlowerQueue";
 import { useInitialLoad } from "./hooks/useInitialLoad";
+import { SakuraTreeSVG } from "./SakuraTreeSVG";
 import {
     resolveTheme, rollFlower, getPhase, FLOWER_PALETTES,
     JAR, SEED_R, MAX_SEEDS,
@@ -263,6 +264,9 @@ export function TerrariumOverlay() {
             <div style={{ position: "relative", width: 300, height: 310 }}>
 
                 <div ref={jarZoneRef} style={{ position: "absolute", top: 0, left: 0, width: 300, height: 250 }}>
+
+                    {/* Sakura tree — behind seeds, clipped by jarClip */}
+                    <SakuraTreeSVG />
 
                     {/* Seeds (physics DOM) */}
                     <div ref={ballLayerRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }} />
